@@ -1,0 +1,273 @@
+import { Request } from 'express';
+import { UserRole } from '@backend/core/domain/enums/user-role.enum';
+import { UserPort } from '@backend/core/application/ports/user.port';
+import { UserFirestoreRepository as UserFirestoreAdapter } from '@backend/infrastructure/persistence/firebase/user.firestore.repository';
+import { CreateUserDto, UserResponseDto, UpdateUserDto, UserHttpMapper } from '@backend/infrastructure/http/mappers/user.mapper';
+import { CreateUserUseCase, UserAlreadyExistsError, InvalidUserDataError } from '@backend/core/application/use-cases/create-user.use-case';
+
+/**
+ * Controlador para manejar las solicitudes HTTP relacionadas con usuarios
+ */
+export class UserController {
+  // Adaptadores
+  private readonly userAdapter : UserPort;
+  // Casos de uso
+  private readonly createUserUseCase : CreateUserUseCase;
+
+  constructor() {
+    // Inicializar adaptadores
+    this.userAdapter = UserFirestoreAdapter.getInstance();
+    // Inicializar casos de uso
+    this.createUserUseCase = new CreateUserUseCase(this.userAdapter);
+  }
+
+  /**
+   * Crea un nuevo usuario
+   */
+  public createUser = async (req: Request): Promise<{ status: number; data: { message: string; user?: UserResponseDto; }, error?: string }> => {
+    try {
+      const userData: CreateUserDto = req.body;
+      
+      // Validar que el cuerpo de la petición no esté vacío
+      if (!userData || Object.keys(userData).length === 0) {
+        return { status: 400, data: { message: 'El cuerpo de la petición no puede estar vacío' } };
+      }
+
+      // Validar roles si se proporcionan
+      if (userData.roles) {
+        const validRoles = Object.values(UserRole);
+        const invalidRoles = userData.roles.filter(role => !validRoles.includes(role as UserRole));
+        
+        if (invalidRoles.length > 0) {
+          return { 
+            status: 400, 
+            data: { 
+              message: `Roles no válidos: ${invalidRoles.join(', ')}. Roles válidos: ${validRoles.join(', ')}` 
+            } 
+          };
+        }
+      }        
+
+      // Ejecutar el caso de uso
+      const result = await this.createUserUseCase.execute(userData);
+      
+      // Mapear la respuesta
+      const userResponse = UserHttpMapper.toResponse(result.user);
+      
+      return { 
+        status: 201, 
+        data: { 
+          message : 'Usuario creado exitosamente',
+          user    : userResponse
+        } 
+      };
+
+    } catch (error: any) {
+      console.error('Error al crear usuario:', error);
+      
+      // Manejar errores específicos del dominio
+      if (error instanceof UserAlreadyExistsError) {
+        return { status: 409, data: { message: error.message } };
+      }
+      
+      if (error instanceof InvalidUserDataError) {
+        return { status: 400, data: { message: error.message } };
+      }
+      
+      // Para otros errores, devolver un error genérico
+      return { 
+        status: 500, 
+        data: { message: 'Error interno del servidor al crear el usuario' }, 
+        error: error instanceof Error ? error.message : 'Error desconocido' 
+      };
+    }
+  }
+
+  /**
+   * Obtiene todos los usuarios
+   */
+  public getUsers = async (req: Request): Promise<{ status: number; data: { users: UserResponseDto[]; message?: string }, error?: string }> => {
+    try {
+      // Obtener parámetros de consulta
+      const { nombre, role } = req.query;
+      
+      // Construir criterios de búsqueda
+      const criteria: any = {};
+      
+      if (nombre && typeof nombre === 'string') {
+        criteria.nombre = nombre;
+      }
+      
+      if (role) {
+        // Asegurarse de que el rol sea uno de los valores válidos
+        const validRoles = Object.values(UserRole);
+        const roles = Array.isArray(role) 
+          ? role.filter(r => validRoles.includes(r as UserRole))
+          : validRoles.includes(role as UserRole) 
+            ? [role as UserRole] 
+            : [];
+        
+        if (roles.length > 0) {
+          criteria.roles = roles;
+        }
+      }
+      
+      // Buscar usuarios que coincidan con los criterios
+      const users = await this.userAdapter.find(criteria);
+      
+      // Mapear usuarios a DTOs de respuesta
+      const usersResponse = users.map(user => UserHttpMapper.toResponse(user));
+      
+      return { 
+        status: 200, 
+        data: { 
+          users: usersResponse 
+        } 
+      };
+      
+    } catch (error: any) {
+      console.error('Error al obtener usuarios:', error);
+      return { 
+        status: 500, 
+        data: { 
+          users: [],
+          message: 'Error interno del servidor al obtener los usuarios' 
+        }, 
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      };
+    }
+  }
+
+  /**
+   * Obtiene un usuario por su ID
+   */
+  public getUserById = async (req: Request): Promise<{ status: number; data: { user?: UserResponseDto; message?: string }, error?: string }> => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return { status: 400, data: { message: 'Se requiere el ID del usuario' } };
+      }
+      
+      const user = await this.userAdapter.findById(id);
+      
+      if (!user) {
+        return { status: 404, data: { message: 'Usuario no encontrado' } };
+      }
+      
+      return { 
+        status: 200, 
+        data: { 
+          user: UserHttpMapper.toResponse(user) 
+        } 
+      };
+    } catch (error) {
+      console.error('Error al obtener usuario por ID:', error);
+      return { 
+        status: 500, 
+        data: { 
+          message: 'Error interno del servidor al obtener el usuario' 
+        }, 
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      };
+    }
+  };
+
+  /**
+   * Actualiza un usuario existente
+   */
+  public updateUser = async (req: Request): Promise<{ status: number; data: { user?: UserResponseDto; message?: string }, error?: string }> => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body as Partial<UpdateUserDto>;
+      
+      if (!id) {
+        return { status: 400, data: { message: 'Se requiere el ID del usuario' } };
+      }
+
+      // Verificar si el usuario existe
+      const existingUser = await this.userAdapter.findById(id);
+      if (!existingUser) {
+        return { status: 404, data: { message: 'Usuario no encontrado' } };
+      }
+
+      // Verificar si el correo ya está en uso por otro usuario
+      if (updateData.email && updateData.email !== existingUser.email) {
+        const emailInUse = await this.userAdapter.isEmailTaken(updateData.email, id);
+        if (emailInUse) {
+          return { status: 409, data: { message: 'El correo electrónico ya está en uso' } };
+        }
+      }
+
+      // Actualizar el usuario
+      const updatedUser = await this.userAdapter.update(id, updateData);
+      
+      if (!updatedUser) {
+        return { status: 404, data: { message: 'Usuario no encontrado' } };
+      }
+
+      return { 
+        status: 200, 
+        data: { 
+          user: UserHttpMapper.toResponse(updatedUser),
+          message: 'Usuario actualizado exitosamente'
+        } 
+      };
+
+    } catch (error: any) {
+      console.error('Error al actualizar usuario:', error);
+      return { 
+        status: 500, 
+        data: { 
+          message: 'Error interno del servidor al actualizar el usuario' 
+        }, 
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      };
+    }
+  };
+
+  /**
+   * Elimina un usuario
+   */
+  public deleteUser = async (req: Request): Promise<{ status: number; data: { success: boolean; message?: string }, error?: string }> => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return { status: 400, data: { success: false, message: 'Se requiere el ID del usuario' } };
+      }
+
+      // Verificar si el usuario existe
+      const existingUser = await this.userAdapter.findById(id);
+      if (!existingUser) {
+        return { status: 404, data: { success: false, message: 'Usuario no encontrado' } };
+      }
+
+      // Eliminar el usuario
+      const success = await this.userAdapter.delete(id);
+      
+      if (!success) {
+        return { status: 500, data: { success: false, message: 'Error al eliminar el usuario' } };
+      }
+
+      return { 
+        status: 200, 
+        data: { 
+          success: true,
+          message: 'Usuario eliminado exitosamente'
+        } 
+      };
+      
+    } catch (error: any) {
+      console.error('Error al eliminar usuario:', error);
+      return { 
+        status: 500, 
+        data: { 
+          success: false,
+          message: 'Error interno del servidor al eliminar el usuario' 
+        }, 
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      };
+    }
+  }
+}

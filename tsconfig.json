@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "paths": {
+      "@app/*": ["apps/*/src"],
+      "@libs/*": ["libs/*/src"],
+      "@infrastructure/*": ["apps/backend/src/infrastructure/*"],
+      "@core/*": ["apps/backend/src/core/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}
