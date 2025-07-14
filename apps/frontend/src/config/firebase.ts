@@ -4,7 +4,6 @@ import { getFirebaseConfig } from './firebase-config';
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
-let isInitializing = false;
 let initializationPromise: Promise<{ app: FirebaseApp; auth: Auth }> | null = null;
 
 // Función para inicializar Firebase de forma asíncrona
@@ -18,9 +17,6 @@ export const initializeFirebase = async (): Promise<{ app: FirebaseApp; auth: Au
   if (initializationPromise) {
     return initializationPromise;
   }
-
-  // Marcar que se está inicializando
-  isInitializing = true;
 
   try {
     // Crear una nueva promesa de inicialización
@@ -44,11 +40,8 @@ export const initializeFirebase = async (): Promise<{ app: FirebaseApp; auth: Au
     return await initializationPromise;
   } catch (error) {
     console.error('Error al inicializar Firebase:', error);
-    isInitializing = false;
     initializationPromise = null;
     throw new Error('No se pudo inicializar Firebase. Por favor, verifica la configuración.');
-  } finally {
-    isInitializing = false;
   }
 };
 

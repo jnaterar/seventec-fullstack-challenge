@@ -3,12 +3,19 @@
     "baseUrl": ".",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
     "paths": {
       "@app/*": ["apps/*/src"],
       "@libs/*": ["libs/*/src"],
       "@infrastructure/*": ["apps/backend/src/infrastructure/*"],
-      "@core/*": ["apps/backend/src/core/*"]
+      "@core/*": ["apps/backend/src/core/*"],
+      "@shared/*": ["./shared/*"],
+      "@/*": ["apps/frontend/src/*"]
     }
   },
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist"],
+  "include": ["apps/**/*.ts", "apps/**/*.tsx", "libs/**/*.ts", "libs/**/*.tsx"]
 }

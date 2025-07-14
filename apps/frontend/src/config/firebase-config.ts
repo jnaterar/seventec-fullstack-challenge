@@ -17,6 +17,25 @@ interface FirebaseConfig {
 let firebaseConfig: FirebaseConfig | null = null;
 
 // Cargar la configuración desde el archivo JSON de forma asíncrona
+// Construir la configuración desde variables de entorno Vite
+const buildConfigFromEnv = (): FirebaseConfig | null => {
+  const {
+    VITE_FIREBASE_API_KEY: apiKey,
+    VITE_FIREBASE_AUTH_DOMAIN: authDomain,
+    VITE_FIREBASE_PROJECT_ID: projectId,
+    VITE_FIREBASE_STORAGE_BUCKET: storageBucket,
+    VITE_FIREBASE_MESSAGING_SENDER_ID: messagingSenderId,
+    VITE_FIREBASE_APP_ID: appId,
+    VITE_FIREBASE_MEASUREMENT_ID: measurementId,
+  } = import.meta.env as any;
+
+  if (apiKey && authDomain && projectId && storageBucket && messagingSenderId && appId) {
+    return { apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId, measurementId } as FirebaseConfig;
+  }
+  return null;
+};
+
+// Cargar la configuración desde el archivo JSON de forma asíncrona
 const loadFirebaseConfig = async (): Promise<FirebaseConfig> => {
   try {
     // Importación dinámica del archivo JSON desde la carpeta pública
@@ -50,7 +69,13 @@ const loadFirebaseConfig = async (): Promise<FirebaseConfig> => {
     return config as FirebaseConfig;
   } catch (error) {
     console.error('Error al cargar la configuración de Firebase:', error);
-    throw new Error('No se pudo cargar la configuración de Firebase. Verifica que el archivo firebase-web-keys.json exista en el directorio público y tenga el formato correcto.');
+    // Intentar construir desde variables de entorno como respaldo
+    const envConfig = buildConfigFromEnv();
+    if (envConfig) {
+      console.warn('Usando configuración de Firebase desde variables de entorno');
+      return envConfig;
+    }
+    throw new Error('No se pudo cargar la configuración de Firebase. Verifica que el archivo firebase-web-keys.json exista en el directorio público, tenga el formato correcto o define las variables de entorno VITE_FIREBASE_* correspondientes.');
   }
 };
 

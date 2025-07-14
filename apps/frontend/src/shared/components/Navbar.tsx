@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { 
   AppBar, 
   Toolbar, 
@@ -16,7 +16,6 @@ import { useAuth } from '@/shared/context/AuthContext';
 
 const Navbar: React.FC = () => {
   const { currentUser, logout, loading } = useAuth();
-  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 

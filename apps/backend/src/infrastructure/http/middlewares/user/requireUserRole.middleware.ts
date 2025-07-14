@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthUserPayload } from '@backend/infrastructure/http/dtos/user.dto';
 import { UserRole } from '@backend/core/domain/enums/user-role.enum';
 import { AuthenticatedRequest } from '@backend/infrastructure/http/types/authenticated-request';
 
@@ -10,22 +9,25 @@ import { AuthenticatedRequest } from '@backend/infrastructure/http/types/authent
 export const requireUserRole = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { user } = req as AuthenticatedRequest;
-    let statusCode = 401;
-    let message    = 'Usuario no autenticado';
-
+    
+    // Verificar si el usuario está autenticado
     if (!user) {
-      return res.status(statusCode).json({ statusCode, message });
+      return res.status(401).json({ 
+        statusCode: 401, 
+        message: 'Usuario no autenticado' 
+      });
     }
 
+    // Verificar si el usuario tiene los permisos necesarios
     const hasPermission = user.roles.some(role => allowedRoles.includes(role));
-
     if (!hasPermission) {
-      statusCode = 403;
-      message    = 'No tienes permisos suficientes';
-
-      return res.status(statusCode).json({ statusCode, message });
+      return res.status(403).json({ 
+        statusCode: 403, 
+        message: 'No tienes permisos suficientes' 
+      });
     }
-
-    next();
+    
+    // Si el usuario está autenticado y tiene permisos, continuar
+    return next();
   };
 };

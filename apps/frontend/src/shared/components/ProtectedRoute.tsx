@@ -52,7 +52,7 @@ interface PublicRouteProps {
   children?: React.ReactNode;
 }
 
-export const PublicRoute: React.FC<PublicRouteProps> = ({ restricted = false, children }) => {
+export const PublicRoute: React.FC<PublicRouteProps> = ({ restricted = false }) => {
   const { currentUser, loading } = useAuth();
   const location = useLocation();
 

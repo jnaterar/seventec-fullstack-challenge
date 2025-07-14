@@ -6,6 +6,7 @@ import Navbar from '@/shared/components/Navbar';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { SignupForm } from '@/features/auth/components/SignupForm';
 import { ForgotPassword } from '@/features/auth/components/ForgotPassword';
+import UserProfile from '@/features/profile/components/UserProfile';
 import { useEffect } from 'react';
 
 // Componente para mostrar mientras se verifica la autenticación
@@ -24,7 +25,7 @@ const AuthCheck = ({ children }: { children: React.ReactNode }) => {
 };
 
 export function App() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser } = useAuth();
   const location = useLocation();
 
   // Verificar autenticación en cada cambio de ruta
@@ -59,14 +60,9 @@ export function App() {
                     {/* Aquí irá el feed de publicaciones */}
                   </Box>
                 } />
-                <Route path="/profile" element={
-                  <Box>
-                    <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
-                      Mi Perfil
-                    </Typography>
-                    {/* Aquí irá el perfil del usuario */}
-                  </Box>
-                } />
+                <Route path="/profile" element={<UserProfile />} />
+                {/* Alias para evitar confusiones con endpoint backend */}
+                <Route path="/users/profile" element={<UserProfile />} />
                 
                 {/* Ejemplo de ruta con roles específicos */}
                 <Route path="/admin" element={

@@ -25,10 +25,18 @@ export function routeHandler(handler: Handler) {
       } else {
         // Handler que maneja la respuesta directamente con res
         await (handler as HandlerWithReqRes)(req, res);
+        
+        // Si el handler no ha enviado una respuesta, asegurarnos de que continúe
+        if (!res.headersSent) {
+          return next();
+        }
       }
+      
+      // Asegurarnos de que siempre haya un retorno si nada más ha respondido
+      return next();
     } catch (err) {
       // Si ocurre un error, lo pasa al middleware de manejo de errores de Express
-      next(err);
+      return next(err);
     }
   };
 }

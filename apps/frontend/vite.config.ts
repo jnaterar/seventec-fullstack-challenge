@@ -7,11 +7,32 @@ export default defineConfig({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/apps/frontend',
   
+  resolve: {
+    alias: [
+      {
+        find: '@',
+        replacement: resolve(__dirname, 'src')
+      },
+      {
+        find: '@backend',
+        replacement: resolve(__dirname, '../../backend/src')
+      },
+      {
+        find: '@shared',
+        replacement: resolve(__dirname, '../../shared')
+      }
+    ],
+    preserveSymlinks: true
+  },
+  
   build: {
     outDir: '../../dist/apps/frontend',
     emptyOutDir: true,
     reportCompressedSize: true,
-    chunkSizeWarningLimit: 1000, // Aumentar el límite de advertencia de tamaño de chunk
+    chunkSizeWarningLimit: 1000,
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         manualChunks: {
@@ -21,15 +42,16 @@ export default defineConfig({
         },
       },
     },
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
   },
   
   server: {
     port: 4200,
     host: 'localhost',
     open: true,
+    fs: {
+      // Permitir servir archivos desde la raíz del proyecto
+      allow: ['..'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
@@ -49,18 +71,11 @@ export default defineConfig({
     nxViteTsPaths(),
   ],
   
-  // Configuración para manejar módulos de Node.js
   define: {
     'process.env': {}
   },
   
-  // Configuración de resolución
-  resolve: {
-    alias: [
-      // Mapear módulos de Node.js
-      { find: 'path', replacement: 'path-browserify' },
-      // Asegurar que las rutas se resuelvan correctamente
-      { find: '@', replacement: resolve(__dirname, 'src') }
-    ]
+  optimizeDeps: {
+    include: ['@shared/**/*'],
   },
 });

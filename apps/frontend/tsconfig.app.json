@@ -8,8 +8,14 @@
     "types": ["node", "vite/client"],
     "jsx": "react-jsx",
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "noEmit": false
   },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../../shared/**/*.ts"
+  ],
   "exclude": [
     "**/*.spec.ts",
     "**/*.spec.tsx",
@@ -19,11 +25,5 @@
     "**/*.test.tsx",
     "**/*.test.js",
     "**/*.test.jsx"
-  ],
-  "include": [
-    "**/*.js",
-    "**/*.jsx",
-    "**/*.ts",
-    "**/*.tsx"
   ]
 }

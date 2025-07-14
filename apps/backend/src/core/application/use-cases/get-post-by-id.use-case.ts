@@ -1,7 +1,6 @@
 import { PostPort } from '@backend/core/application/ports/post.port';
 import { CommentPort } from '@backend/core/application/ports/post.port';
 import { LikePort } from '@backend/core/application/ports/post.port';
-import { Post } from '@backend/core/domain/entities/post.entity';
 import { Comment } from '@backend/core/domain/entities/comment.entity';
 
 export class GetPostByIdUseCase {

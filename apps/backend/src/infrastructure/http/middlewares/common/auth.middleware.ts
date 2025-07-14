@@ -45,7 +45,7 @@ export const authenticateToken = async (
       (req as any).user = decoded;
       
       // Continuar con el siguiente middleware
-      next();
+      return next();
     } catch (error: any) {
       console.error('Error al verificar el token:', error);
       return res.status(403).json({ message: 'Token inválido o expirado' });

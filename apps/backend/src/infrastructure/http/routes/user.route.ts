@@ -4,6 +4,7 @@ import { routeHandler } from '@backend/infrastructure/http/middlewares/common/ro
 import { validateRequest } from '@backend/infrastructure/http/middlewares/user/validateRequest.middleware';
 import { authorizeResourceOwner } from '@backend/infrastructure/http/middlewares/user/authorizeResourceOwner.middleware';
 import { CreateUserDto, UpdateUserDto } from '@backend/infrastructure/http/mappers/user.mapper';
+import { UpdateProfileDto } from '@backend/infrastructure/http/dtos/update-profile.dto';
 import { UserRole } from '@backend/core/domain/enums/user-role.enum';
 import { requireUserRole } from '@backend/infrastructure/http/middlewares/user/requireUserRole.middleware';
 import { authenticateToken } from '@backend/infrastructure/http/middlewares/common/auth.middleware';
@@ -17,6 +18,14 @@ router.get(
   '/profile',
   authenticateToken,
   routeHandler(controller.getProfile)
+);
+
+// Actualizar perfil del usuario autenticado
+router.put(
+  '/profile',
+  authenticateToken,
+  validateRequest(UpdateProfileDto, 'body'),
+  routeHandler(controller.updateUserProfile)
 );
 
 // Obtener todos los usuarios

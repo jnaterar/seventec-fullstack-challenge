@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { routeHandler } from '@backend/infrastructure/http/middlewares/common/routeHandler.middleware';
 import { AuthController } from '@backend/infrastructure/http/controllers/auth.controller';
 
 const router = Router();

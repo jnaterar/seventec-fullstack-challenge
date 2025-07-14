@@ -44,7 +44,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [_, setUser] = useState<User | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -81,6 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         setUser(user);
         setCurrentUser({ ...user, token });
+        
       } else {
         setUser(null);
         setCurrentUser(null);
@@ -102,76 +103,88 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string) => {
     try {
       setLoading(true);
       
-      if (!authInstance) {
-        throw new Error('La autenticación no está inicializada');
-      }
+      // 1. Iniciar sesión con Firebase
+      const auth = await initializeAuth();
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // 1. Iniciar sesión con Firebase Authentication
-      const userCredential = await signInWithEmailAndPassword(authInstance, email, password);
-      
-      // 2. Obtener el ID Token del usuario autenticado
+      // 2. Obtener el token de Firebase
       const idToken = await userCredential.user.getIdToken();
       
-      // 3. Enviar el ID Token al backend para autenticación
-      const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN, { idToken });
+      // 3. Autenticarse en el backend con el token de Firebase
+      const loginResponse = await axios.post(API_ENDPOINTS.AUTH.LOGIN, {
+        idToken: idToken
+      });
       
-      if (response.data.token) {
-        const { token, user } = response.data;
-        
-        // Guardar token y usuario en localStorage
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        // Establecer el usuario actual
-        setCurrentUser({ ...user, token });
-        
-        // Redirigir al dashboard
-        navigate('/');
+      if (!loginResponse.data.success) {
+        throw new Error(loginResponse.data.message || 'Error en la autenticación');
       }
+      
+      const { token: backendToken, user: userData } = loginResponse.data;
+      
+      // 4. Guardar el token del backend en localStorage
+      localStorage.setItem('token', backendToken);
+      
+      // 5. Crear el objeto de usuario
+      const user = {
+        uid: userCredential.user.uid,
+        email: userData.email,
+        displayName: userData.nombre || userCredential.user.displayName || userCredential.user.email?.split('@')[0] || 'Usuario',
+        roles: userData.roles || [],
+        token: backendToken
+      };
+      
+      // 6. Actualizar el estado
+      setCurrentUser(user);
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // 7. Redirigir al usuario
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectTo = searchParams.get('redirect') || '/';
+      navigate(redirectTo, { replace: true });
     } catch (error: any) {
-      console.error('Login error:', error);
-      let errorMessage = 'No se pudo iniciar sesión. Verifica tus credenciales.';
-      
-      // Manejar errores específicos de Firebase
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = 'Correo electrónico o contraseña incorrectos.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Demasiados intentos fallidos. Por favor, inténtalo más tarde.';
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'Esta cuenta ha sido deshabilitada.';
-      } else if (error.response?.data?.message) {
-        // Si hay un mensaje de error del backend, usarlo
-        errorMessage = error.response.data.message;
-      }
-      
-      throw new Error(errorMessage);
+      console.error('Error al iniciar sesión:', error);
+      // Limpiar el token en caso de error
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = async (): Promise<void> => {
+  const logout = async () => {
     try {
-      if (!authInstance) {
-        throw new Error('La autenticación no está inicializada');
-      }
-      // Cerrar sesión en Firebase
-      await firebaseSignOut(authInstance);
+      setLoading(true);
+      const auth = await initializeAuth();
+      await firebaseSignOut(auth);
       
-      // Limpiar el estado y el almacenamiento local
+      // Obtener la ruta actual para redirigir después del login
+      const currentPath = window.location.pathname;
+      
+      // Limpiar el estado
       setCurrentUser(null);
+      setUser(null);
+      
+      // Limpiar el almacenamiento local
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
-      // Redirigir al login
-      navigate('/login');
+      // Redirigir al login con la ruta actual para redirigir después del login
+      if (currentPath !== '/login') {
+        navigate(`/login?redirect=${encodeURIComponent(currentPath)}`, { replace: true });
+      } else {
+        navigate('/login', { replace: true });
+      }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error al cerrar sesión:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -13,7 +13,7 @@ export const errorHandler = (
   error : any,
   req   : Request,
   res   : Response,
-  next  : NextFunction
+  _next  : NextFunction
 ) => {
   console.error(`[${new Date().toISOString()}] Error:`, {
     message: error.message,

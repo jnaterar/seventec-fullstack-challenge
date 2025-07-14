@@ -1,4 +1,6 @@
 import admin from 'firebase-admin';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '@backend/config';
 import { FirebaseAdmin } from '@backend/infrastructure/persistence/firebase/firebase.config';
 import { UserRole } from '@backend/core/domain/enums/user-role.enum';
 import { UserPort } from '@backend/core/application/ports/user.port';
@@ -60,14 +62,20 @@ export class FirebaseAuthRepository implements AuthPort {
       const userDoc = await this.userPort.findByEmail(userRecord.email || '');
       const roles = userDoc?.roles || [UserRole.PARTICIPANT];
 
-      // Generar token personalizado con información adicional
-      const customToken = await this.auth.createCustomToken(userRecord.uid, {
-        email: userRecord.email,
-        roles: roles
-      });
+      // Generar token JWT firmado por el backend con la información básica del usuario
+      const jwtToken = jwt.sign(
+        {
+          id   : userRecord.uid, // alias
+          uid  : userRecord.uid,
+          email: userRecord.email,
+          roles: roles,
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
 
       return { 
-        token: customToken,
+        token: jwtToken,
         user: {
           uid: userRecord.uid,
           email: userRecord.email,
@@ -87,9 +95,8 @@ export class FirebaseAuthRepository implements AuthPort {
    */
   async validateToken(token: string): Promise<boolean> {
     try {
-      await this.auth.verifyIdToken(token);
+      jwt.verify(token, JWT_SECRET);
       return true;
-
     } catch (error) {
       return false;
     }
@@ -100,11 +107,11 @@ export class FirebaseAuthRepository implements AuthPort {
    */
   async getProfileFromToken(token: string) {
     try {
-      const decodedToken = await this.auth.verifyIdToken(token);
+      const decoded: any = jwt.verify(token, JWT_SECRET);
       return {
-        id: decodedToken.uid,
-        email: decodedToken.email || '',
-        roles: decodedToken.roles || []
+        id: decoded.id || decoded.uid,
+        email: decoded.email,
+        roles: decoded.roles || []
       };
     } catch (error) {
       throw new Error('Token inválido');

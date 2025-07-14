@@ -1,0 +1,13 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "NODE_OPTIONS='--experimental-specifier-resolution=node' tsx --tsconfig tsconfig.json src/main.ts",
+    "build": "tsc",
+    "dev": "NODE_OPTIONS='--experimental-specifier-resolution=node' tsx watch --tsconfig tsconfig.json src/main.ts"
+  },
+  "dependencies": {
+  }
+}
