@@ -1,6 +1,6 @@
 import { User } from '@core/domain/entities/user.entity';
 import { UserRole } from '@backend/core/domain/enums/user-role.enum';
-import { IsString, IsEmail, IsOptional, IsArray, IsNotEmpty, IsEnum } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsArray, IsNotEmpty, IsEnum, MinLength } from 'class-validator';
 
 /**
  * DTO para la creación de un usuario a través de HTTP
@@ -21,6 +21,11 @@ export class CreateUserDto {
   @IsEmail({}, { message: 'El correo electrónico no es válido' })
   @IsNotEmpty({ message: 'El correo electrónico es requerido' })
   email!: string;
+
+  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'La contraseña es requerida' })
+  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
+  password!: string;
 
   @IsString({ message: 'La biografía debe ser una cadena de texto' })
   @IsOptional()

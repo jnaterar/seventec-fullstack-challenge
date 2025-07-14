@@ -21,5 +21,11 @@ export const API_PATHS = {
   AUTH     : '/auth'
 } as const;
 
+// Configuración de URL Frontend
+export const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+// Configuración de URL Reset Password
+export const RESET_PASSWORD_URL = process.env.RESET_PASSWORD_URL || 'http://localhost:4200/reset-password';
+
 // Configuración de JWT
 export const JWT_SECRET = process.env.JWT_SECRET || 'clave-secreta';

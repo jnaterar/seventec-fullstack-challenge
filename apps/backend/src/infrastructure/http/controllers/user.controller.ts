@@ -1,9 +1,10 @@
 import { Request } from 'express';
 import { UserRole } from '@backend/core/domain/enums/user-role.enum';
 import { UserPort } from '@backend/core/application/ports/user.port';
-import { UserFirestoreRepository as UserFirestoreAdapter } from '@backend/infrastructure/persistence/firebase/user.firestore.repository';
+import { UserFirestoreRepository } from '@backend/infrastructure/persistence/firebase/user.firestore.repository';
 import { CreateUserDto, UserResponseDto, UpdateUserDto, UserHttpMapper } from '@backend/infrastructure/http/mappers/user.mapper';
 import { CreateUserUseCase, UserAlreadyExistsError, InvalidUserDataError } from '@backend/core/application/use-cases/create-user.use-case';
+import { FirebaseAuthRepository } from '@backend/infrastructure/persistence/firebase/auth.firestore.repository';
 
 /**
  * Controlador para manejar las solicitudes HTTP relacionadas con usuarios
@@ -14,11 +15,30 @@ export class UserController {
   // Casos de uso
   private readonly createUserUseCase : CreateUserUseCase;
 
-  constructor() {
-    // Inicializar adaptadores
-    this.userAdapter = UserFirestoreAdapter.getInstance();
+  private static instance: UserController;
+  
+  private constructor() {
+    // Inicializar el adaptador de usuarios
+    this.userAdapter = UserFirestoreRepository.getInstance(null as any);
+    
+    // Inicializar el adaptador de autenticación
+    const authRepository = FirebaseAuthRepository.getInstance(this.userAdapter);
+    
+    // Actualizar la instancia del UserFirestoreRepository con el authAdapter
+    UserFirestoreRepository.getInstance(this.userAdapter);
+    
     // Inicializar casos de uso
     this.createUserUseCase = new CreateUserUseCase(this.userAdapter);
+  }
+
+  /**
+   * Obtiene la instancia única del UserController
+   */
+  public static getInstance(): UserController {
+    if (!UserController.instance) {
+      UserController.instance = new UserController();
+    }
+    return UserController.instance;
   }
 
   /**
@@ -33,8 +53,11 @@ export class UserController {
         return { status: 400, data: { message: 'El cuerpo de la petición no puede estar vacío' } };
       }
 
-      // Validar roles si se proporcionan
-      if (userData.roles) {
+      // Establecer el rol por defecto como PARTICIPANT si no se proporciona
+      if (!userData.roles || userData.roles.length === 0) {
+        userData.roles = [UserRole.PARTICIPANT];
+      } else {
+        // Si se proporcionan roles, validar que sean válidos
         const validRoles = Object.values(UserRole);
         const invalidRoles = userData.roles.filter(role => !validRoles.includes(role as UserRole));
         
@@ -46,38 +69,50 @@ export class UserController {
             } 
           };
         }
-      }        
+      }
 
       // Ejecutar el caso de uso
       const result = await this.createUserUseCase.execute(userData);
       
-      // Mapear la respuesta
+      // Mapear la respuesta (excluyendo información sensible como la contraseña)
       const userResponse = UserHttpMapper.toResponse(result.user);
       
       return { 
         status: 201, 
         data: { 
-          message : 'Usuario creado exitosamente',
+          message : 'Usuario registrado exitosamente',
           user    : userResponse
         } 
       };
 
     } catch (error: any) {
-      console.error('Error al crear usuario:', error);
+      console.error('Error al registrar usuario:', error);
       
       // Manejar errores específicos del dominio
       if (error instanceof UserAlreadyExistsError) {
-        return { status: 409, data: { message: error.message } };
+        return { 
+          status: 400, // Cambiado a 400 para mejor manejo en el frontend
+          data: { 
+            message: 'El correo electrónico ya está registrado' 
+          } 
+        };
       }
       
       if (error instanceof InvalidUserDataError) {
-        return { status: 400, data: { message: error.message } };
+        return { 
+          status: 400, 
+          data: { 
+            message: error.message.replace('Datos de usuario inválidos: ', '') 
+          } 
+        };
       }
       
       // Para otros errores, devolver un error genérico
       return { 
         status: 500, 
-        data: { message: 'Error interno del servidor al crear el usuario' }, 
+        data: { 
+          message: 'Error al procesar el registro. Por favor, intente nuevamente.' 
+        }, 
         error: error instanceof Error ? error.message : 'Error desconocido' 
       };
     }
@@ -220,6 +255,48 @@ export class UserController {
         status: 500, 
         data: { 
           message: 'Error interno del servidor al actualizar el usuario' 
+        }, 
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      };
+    }
+  };
+
+  /**
+   * Obtiene el perfil del usuario autenticado
+   */
+  public getProfile = async (req: Request): Promise<{ status: number; data: { user?: UserResponseDto; message?: string }, error?: string }> => {
+    try {
+      // El middleware de autenticación ya validó el token y adjuntó el usuario a la solicitud
+      const authUser = (req as any).user;
+      
+      if (!authUser) {
+        return { status: 401, data: { message: 'No autorizado' } };
+      }
+
+      // Obtener información del usuario desde el adaptador
+      const user = await this.userAdapter.findById(authUser.uid);
+      
+      if (!user) {
+        return { status: 404, data: { message: 'Usuario no encontrado' } };
+      }
+
+      // Mapear la respuesta según la entidad User
+      const profile = UserHttpMapper.toResponse(user);
+
+      return { 
+        status: 200, 
+        data: { 
+          user: profile,
+          message: 'Perfil obtenido exitosamente'
+        } 
+      };
+
+    } catch (error: any) {
+      console.error('Error al obtener perfil:', error);
+      return { 
+        status: 500, 
+        data: { 
+          message: 'Error interno del servidor al obtener el perfil' 
         }, 
         error: error instanceof Error ? error.message : 'Error desconocido'
       };

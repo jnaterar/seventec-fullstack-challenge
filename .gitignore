@@ -88,4 +88,5 @@ Thumbs.db
 
 # Firebase
 firebase-keys.json
+firebase-web-keys.json
 functions/service-account-key.json

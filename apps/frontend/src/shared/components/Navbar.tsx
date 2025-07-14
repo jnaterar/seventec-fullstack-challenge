@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { 
   AppBar, 
@@ -9,14 +9,16 @@ import {
   Avatar,
   Menu,
   MenuItem,
-  Box
+  Box,
+  CircularProgress
 } from '@mui/material';
 import { useAuth } from '@/shared/context/AuthContext';
 
 const Navbar: React.FC = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, loading } = useAuth();
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -28,10 +30,14 @@ const Navbar: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
+      handleClose();
       await logout();
-      navigate('/login');
+      // La navegación se maneja en el AuthContext después de cerrar sesión
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -90,10 +96,17 @@ const Navbar: React.FC = () => {
               >
                 Mi Perfil
               </MenuItem>
-              <MenuItem onClick={handleLogout}>Cerrar Sesión</MenuItem>
+              <MenuItem onClick={handleLogout} disabled={isLoggingOut}>
+                {isLoggingOut ? (
+                  <Box display="flex" alignItems="center" width="100%">
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    Cerrando sesión...
+                  </Box>
+                ) : 'Cerrar Sesión'}
+              </MenuItem>
             </Menu>
           </div>
-        ) : (
+        ) : !loading && (
           <Box>
             <Button 
               color="inherit" 

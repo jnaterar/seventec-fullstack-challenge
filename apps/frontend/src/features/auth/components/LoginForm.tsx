@@ -15,24 +15,21 @@ import {
 export const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [formError, setFormError] = useState('');
+  const { login, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      setError('');
-      setLoading(true);
+      setFormError('');
       await login(email, password);
-      navigate('/');
-    } catch (error) {
-      setError('No se pudo iniciar sesión. Verifica tus credenciales.');
+      // La redirección ahora se maneja en el AuthContext después de un inicio de sesión exitoso
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'No se pudo iniciar sesión. Verifica tus credenciales.';
+      setFormError(errorMessage);
       console.error('Error al iniciar sesión:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -50,9 +47,9 @@ export const LoginForm: React.FC = () => {
           Iniciar sesión
         </Typography>
         
-        {error && (
+        {formError && (
           <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
-            {error}
+            {formError}
           </Alert>
         )}
         
@@ -89,8 +86,9 @@ export const LoginForm: React.FC = () => {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
             disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? <CircularProgress size={24} /> : 'Iniciar sesión'}
+            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </Button>
           
           <Box sx={{ textAlign: 'center', mt: 2 }}>

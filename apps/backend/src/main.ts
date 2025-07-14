@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 import express from 'express';
+import { initializeFirebase } from '@backend/infrastructure/persistence/firebase/firebase.config';
 import cors from 'cors';
 import { exec } from 'child_process';
 import { API_PATHS } from '@backend/config';
@@ -9,6 +10,9 @@ import { errorHandler } from '@backend/infrastructure/http/middlewares/common/er
 import { UserRouter } from '@backend/infrastructure/http/routes/user.route';
 import { PostRouter } from '@backend/infrastructure/http/routes/post.route';
 import { AuthRouter } from '@backend/infrastructure/http/routes/auth.route';
+
+// Inicializar Firebase
+initializeFirebase();
 
 // Crear aplicación Express
 const app = express();
@@ -22,7 +26,9 @@ app.use(express.json());
 const authMiddleware = (req: any, res: any, next: any) => {
   // Lista de rutas públicas que no requieren autenticación
   const publicRoutes = [
-    '/generate-token'
+    '/api/auth',  // Todas las rutas de autenticación son públicas
+    '/generate-token',
+    '/api/users/signup'  // Ruta específica para registro
   ];
 
   // Si la ruta es pública, continuar sin verificar token
@@ -53,12 +59,12 @@ const authMiddleware = (req: any, res: any, next: any) => {
 };
 
 // Ruta Pública - Prueba
-app.get(API_PATHS.TEST, (_req, res) => {
+app.get(`/api${API_PATHS.TEST}`, (_req, res) => {
   res.status(200).json({ status: 'OK', message: 'API ejecutandose correctamente' });
 });
 
 // Ruta Pública - Generar Token
-app.get('/generate-token', (_req, res) => {
+app.get(`/api${API_PATHS.AUTH}/generate-token`, (_req, res) => {
   exec('npx tsx apps/backend/src/scripts/generate-token.ts', (error, stdout, stderr) => {
     if (error) {
       console.error('Error ejecutando generate-token.ts:', stderr);
@@ -71,16 +77,16 @@ app.get('/generate-token', (_req, res) => {
 });
 
 // Ruta Pública - Autenticación
-app.use(API_PATHS.AUTH, AuthRouter);
+app.use(`/api${API_PATHS.AUTH}`, AuthRouter);
 
 // Middleware de autenticación aplicado después de rutas públicas
 app.use(authMiddleware);
 
 // Rutas Privadas - Usuarios
-app.use(API_PATHS.USERS, UserRouter);
+app.use(`/api${API_PATHS.USERS}`, UserRouter);
 
 // Rutas Privadas - Posts
-app.use(API_PATHS.POSTS, PostRouter);
+app.use(`/api${API_PATHS.POSTS}`, PostRouter);
 
 // Manejo de errores global
 app.use(errorHandler);

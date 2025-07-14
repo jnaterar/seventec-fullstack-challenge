@@ -16,7 +16,7 @@ export const SignupForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [nombre, setNombre] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
@@ -32,7 +32,7 @@ export const SignupForm: React.FC = () => {
     try {
       setError('');
       setLoading(true);
-      await signup(email, password, displayName);
+      await signup(email, password, nombre);
       navigate('/');
     } catch (error) {
       setError('Error al crear la cuenta. Intenta de nuevo.');
@@ -67,13 +67,13 @@ export const SignupForm: React.FC = () => {
             margin="normal"
             required
             fullWidth
-            id="displayName"
-            label="Nombre de Usuario"
-            name="displayName"
+            id="nombre"
+            label="Nombre Completo"
+            name="nombre"
             autoComplete="name"
             autoFocus
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
           />
           
           <TextField

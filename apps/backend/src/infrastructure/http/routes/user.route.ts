@@ -6,10 +6,18 @@ import { authorizeResourceOwner } from '@backend/infrastructure/http/middlewares
 import { CreateUserDto, UpdateUserDto } from '@backend/infrastructure/http/mappers/user.mapper';
 import { UserRole } from '@backend/core/domain/enums/user-role.enum';
 import { requireUserRole } from '@backend/infrastructure/http/middlewares/user/requireUserRole.middleware';
+import { authenticateToken } from '@backend/infrastructure/http/middlewares/common/auth.middleware';
 
 // Inicializar enrutador y controlador
-const router     = Router();
-const controller = new Controller();
+const router = Router();
+const controller = Controller.getInstance();
+
+// Obtener perfil del usuario autenticado
+router.get(
+  '/profile',
+  authenticateToken,
+  routeHandler(controller.getProfile)
+);
 
 // Obtener todos los usuarios
 router.get(
@@ -25,10 +33,9 @@ router.get(
   routeHandler(controller.getUserById)
 );
 
-// Crear un nuevo usuario
+// Crear un nuevo usuario (ruta pública para registro)
 router.post(
-  '/',
-  requireUserRole(UserRole.ADMIN, UserRole.ORGANIZER, UserRole.PARTICIPANT),
+  '/signup',
   validateRequest(CreateUserDto, 'body'),
   routeHandler(controller.createUser)
 );

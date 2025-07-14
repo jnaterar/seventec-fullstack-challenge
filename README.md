@@ -1,4 +1,4 @@
-# Convention App - Fullstack Challenge
+# Convention App
 
 Aplicación fullstack para gestión de convenciones desarrollada con React, TypeScript, Express y Firebase, siguiendo principios de arquitectura hexagonal y clean architecture.
 
@@ -30,7 +30,7 @@ Aplicación fullstack para gestión de convenciones desarrollada con React, Type
 ## 🛠️ Estructura del Proyecto
 
 ```
-convention-app/
+seventec-fullstack-challenge/
 ├── apps/
 │   ├── frontend/           # Aplicación React
 │   │   ├── src/
@@ -66,7 +66,7 @@ convention-app/
 1. Clonar el repositorio:
    ```bash
    git clone [URL_DEL_REPOSITORIO]
-   cd convention-app
+   cd seventec-fullstack-challenge
    ```
 
 2. Instalar dependencias:

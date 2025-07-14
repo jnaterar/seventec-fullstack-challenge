@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
+import { resolve } from 'path';
 
 export default defineConfig({
   root: __dirname,
@@ -47,11 +48,19 @@ export default defineConfig({
     react(),
     nxViteTsPaths(),
   ],
-
-  // Configuración de alias para rutas absolutas
+  
+  // Configuración para manejar módulos de Node.js
+  define: {
+    'process.env': {}
+  },
+  
+  // Configuración de resolución
   resolve: {
     alias: [
-      { find: '@', replacement: '/src' },
-    ],
+      // Mapear módulos de Node.js
+      { find: 'path', replacement: 'path-browserify' },
+      // Asegurar que las rutas se resuelvan correctamente
+      { find: '@', replacement: resolve(__dirname, 'src') }
+    ]
   },
 });

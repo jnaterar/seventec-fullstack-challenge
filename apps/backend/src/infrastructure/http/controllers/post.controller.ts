@@ -15,7 +15,7 @@ import { CommentDto } from '@backend/infrastructure/http/dtos/comment.dto';
 import { PostFirestoreRepository as PostFirestoreAdapter } from '@backend/infrastructure/persistence/firebase/post.firestore.repository';
 import { CommentFirestoreRepository as CommentFirestoreAdapter } from '@backend/infrastructure/persistence/firebase/comment.firestore.repository';
 import { LikeFirestoreRepository as LikeFirestoreAdapter } from '@backend/infrastructure/persistence/firebase/like.firestore.repository';
-import { UserFirestoreRepository as UserFirestoreAdapter } from '@backend/infrastructure/persistence/firebase/user.firestore.repository';
+import { UserFirestoreRepository } from '@backend/infrastructure/persistence/firebase/user.firestore.repository';
 import { FcmNotificationService as NotificationAdapter } from '@backend/infrastructure/services/fcm.notification.service';
 
 export class PostController {
@@ -35,14 +35,28 @@ export class PostController {
   private readonly toggleLikeUseCase    : ToggleLikeUseCase;
 
   constructor() {
+    // Primero creamos una implementación temporal de UserPort
+    const tempUserPort: UserPort = {
+      create: async () => { throw new Error('Not implemented'); },
+      findById: async () => null,
+      find: async () => [],
+      update: async () => null,
+      delete: async () => false,
+      findByEmail: async () => null,
+      isEmailTaken: async () => false,
+      findByRole: async () => []
+    };
+
     // Inicializar adaptadores
     this.postAdapter          = PostFirestoreAdapter.getInstance();
     this.commentAdapter       = CommentFirestoreAdapter.getInstance();
     this.likeAdapter          = LikeFirestoreAdapter.getInstance();
-    this.userAdapter          = UserFirestoreAdapter.getInstance();
+    
+    // Inicializar el adaptador de usuarios con la implementación temporal
+    this.userAdapter = UserFirestoreRepository.getInstance(tempUserPort);
 
     // Servicio de notificaciones
-    this.notificationService  = new NotificationService(this.userAdapter, new NotificationAdapter());
+    this.notificationService = new NotificationService(this.userAdapter, new NotificationAdapter());
 
     // Inicializar casos de usos
     this.createPostUseCase    = new CreatePostUseCase(this.postAdapter, this.notificationService);

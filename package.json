@@ -8,8 +8,8 @@
     "start": "nx serve frontend",
     "start:front": "vite --port 4200 --config apps/frontend/vite.config.ts",
     "start:back": "cross-env NODE_ENV=development tsx --tsconfig apps/backend/tsconfig.json apps/backend/src/main.ts",
-    "build": "nx build",
-    "build:front": "nx build frontend",
+    "build": "npm run copy:firebase-config && nx build",
+    "build:front": "npm run copy:firebase-config && nx build frontend",
     "build:back": "nx build backend",
     "test": "nx test",
     "test:watch": "nx test --watch",
@@ -17,7 +17,8 @@
     "format": "nx format:write",
     "format:check": "nx format:check",
     "deploy:functions": "cd functions && npm install && cd .. && firebase deploy --only functions",
-    "serve:functions": "cd functions && npm install && cd .. && firebase emulators:start --only functions"
+    "serve:functions": "cd functions && npm install && cd .. && firebase emulators:start --only functions",
+    "copy:firebase-config": "node apps/frontend/scripts/copy-firebase-config.mjs"
   },
   "author": "",
   "license": "MIT",
@@ -40,6 +41,7 @@
     "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.3.2",
     "jsonwebtoken": "^9.0.2",
+    "path-browserify": "^1.0.1",
     "react-router-dom": "^7.6.3",
     "tslib": "^2.3.0"
   },
