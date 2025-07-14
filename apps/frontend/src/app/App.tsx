@@ -7,6 +7,7 @@ import { LoginForm } from '@/features/auth/components/LoginForm';
 import { SignupForm } from '@/features/auth/components/SignupForm';
 import { ForgotPassword } from '@/features/auth/components/ForgotPassword';
 import UserProfile from '@/features/profile/components/UserProfile';
+import { Feed } from '@/features/feed';
 import { useEffect } from 'react';
 
 // Componente para mostrar mientras se verifica la autenticación
@@ -25,7 +26,6 @@ const AuthCheck = ({ children }: { children: React.ReactNode }) => {
 };
 
 export function App() {
-  const { currentUser } = useAuth();
   const location = useLocation();
 
   // Verificar autenticación en cada cambio de ruta
@@ -49,17 +49,7 @@ export function App() {
 
               {/* Rutas protegidas - solo accesibles para usuarios autenticados */}
               <Route element={<ProtectedRoute />}>
-                <Route index element={
-                  <Box>
-                    <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
-                      {currentUser ? `Bienvenido, ${currentUser.displayName || 'Usuario'}` : 'Bienvenido a Convention App'}
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                      Comienza a explorar las publicaciones o comparte algo nuevo.
-                    </Typography>
-                    {/* Aquí irá el feed de publicaciones */}
-                  </Box>
-                } />
+                <Route index element={<Feed />} />
                 <Route path="/profile" element={<UserProfile />} />
                 {/* Alias para evitar confusiones con endpoint backend */}
                 <Route path="/users/profile" element={<UserProfile />} />

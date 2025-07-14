@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { PostController as Controller } from '@backend/infrastructure/http/controllers/post.controller';
 import { routeHandler } from '@backend/infrastructure/http/middlewares/common/routeHandler.middleware';
-import { authorizeResourceOwner } from '@backend/infrastructure/http/middlewares/user/authorizeResourceOwner.middleware';
+import { authorizePostOwner } from '@backend/infrastructure/http/middlewares/user/authorizePostOwner.middleware';
 
 // Inicializar enrutador y controlador
 const router     = Router();
@@ -18,11 +18,11 @@ router.post('/',
     routeHandler(controller.createPost)
 );
 router.put('/:postId', 
-    authorizeResourceOwner,
+    authorizePostOwner,
     routeHandler(controller.updatePost)
 );
 router.delete('/:postId', 
-    authorizeResourceOwner,
+    authorizePostOwner,
     routeHandler(controller.deletePost)
 );
 

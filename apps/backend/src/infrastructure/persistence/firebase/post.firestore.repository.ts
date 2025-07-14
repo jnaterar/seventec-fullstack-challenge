@@ -55,8 +55,9 @@ export class PostFirestoreRepository implements PostPort {
         id: doc.id,
         imagen: data.imagen || '',
         descripcion: data.descripcion || '',
-        fechaCreacion: data.fechaCreacion || new Date(),
-        fechaEdicion: data.fechaEdicion || new Date(),
+        // Convertir las fechas de Firestore correctamente y usar una fecha constante de fallback
+        fechaCreacion: data.fechaCreacion ? new Date(data.fechaCreacion.toDate ? data.fechaCreacion.toDate() : data.fechaCreacion) : new Date('2023-01-01'),
+        fechaEdicion: data.fechaEdicion ? new Date(data.fechaEdicion.toDate ? data.fechaEdicion.toDate() : data.fechaEdicion) : undefined,
         userId: data.userId || ''
       });
     }).filter((post): post is Post => post !== null);
@@ -160,8 +161,9 @@ export class PostFirestoreRepository implements PostPort {
         id: doc.id,
         imagen: data.imagen || '',
         descripcion: data.descripcion || '',
-        fechaCreacion: data.fechaCreacion || new Date(),
-        fechaEdicion: data.fechaEdicion || new Date(),
+        // Convertir las fechas de Firestore correctamente y usar una fecha constante de fallback
+        fechaCreacion: data.fechaCreacion ? new Date(data.fechaCreacion.toDate ? data.fechaCreacion.toDate() : data.fechaCreacion) : new Date('2023-01-01'),
+        fechaEdicion: data.fechaEdicion ? new Date(data.fechaEdicion.toDate ? data.fechaEdicion.toDate() : data.fechaEdicion) : undefined,
         userId: data.userId || ''
       });
     }).filter((post): post is Post => post !== null);

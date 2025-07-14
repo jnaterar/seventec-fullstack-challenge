@@ -72,12 +72,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = authInstance.onAuthStateChanged(async (firebaseUser: any) => {
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
+        
+        // Recuperar los roles almacenados si existen
+        let savedRoles: string[] = [];
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          try {
+            const userData = JSON.parse(savedUser);
+            savedRoles = userData.roles || [];
+          } catch (e) {
+            console.error('Error al recuperar roles guardados:', e);
+          }
+        }
+        
         const user = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
           emailVerified: firebaseUser.emailVerified,
+          roles: savedRoles // Usar los roles almacenados
         };
         setUser(user);
         setCurrentUser({ ...user, token });
@@ -96,8 +110,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const user = localStorage.getItem('user');
     
     if (token && user) {
-      setCurrentUser({ ...JSON.parse(user), token });
-      setLoading(false);
+      try {
+        const userData = JSON.parse(user);
+        // Asegurarnos de que los roles se preserven
+        setCurrentUser({
+          ...userData,
+          token,
+          roles: userData.roles || []
+        });
+      } catch (error) {
+        console.error('Error al procesar datos del usuario:', error);
+      } finally {
+        setLoading(false);
+      }
     } else {
       setLoading(false);
     }
@@ -188,10 +213,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Obtener el encabezado de autenticación
+  // Obtener el encabezado de autenticación y asegurar que los roles estén presentes
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
     if (token && currentUser) {
+      // Si currentUser no tiene roles pero hay datos en localStorage, actualizar
+      if (!currentUser.roles || currentUser.roles.length === 0) {
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          try {
+            const userData = JSON.parse(savedUser);
+            if (userData.roles && userData.roles.length > 0 && currentUser.uid) {
+              // Actualizar el currentUser con los roles del localStorage
+              setCurrentUser({
+                ...currentUser,
+                roles: userData.roles
+              });
+            }
+          } catch (error) {
+            console.error('Error al recuperar roles del usuario:', error);
+          }
+        }
+      }
       return { Authorization: `Bearer ${token}` };
     }
     return {};

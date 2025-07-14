@@ -9,7 +9,19 @@ export class UpdatePostUseCase {
   ) {}
 
   async execute(id: string, postDto: Partial<PostDto>): Promise<Post> {
-    const post = Post.fromJSON({ ...postDto, id });
+    // Primero obtenemos el post original para conservar datos críticos como el userId
+    const originalPost = await this.postPort.findById(id);
+    if (!originalPost) {
+      throw new Error(`Post con id ${id} no encontrado`);
+    }
+    
+    // Preservamos el userId y otros campos críticos que no deberían cambiar
+    const post = Post.fromJSON({
+      ...postDto,
+      id,
+      userId: originalPost.userId // Preservamos el userId original
+    });
+    
     const updated = await this.postPort.update(post);
     try {
       if (this.notificationService) {

@@ -62,7 +62,7 @@ export class PostController {
     this.createPostUseCase    = new CreatePostUseCase(this.postAdapter, this.notificationService);
     this.updatePostUseCase    = new UpdatePostUseCase(this.postAdapter, this.notificationService);
     this.deletePostUseCase    = new DeletePostUseCase(this.postAdapter);
-    this.getPostsUseCase      = new GetPostsUseCase(this.postAdapter, this.commentAdapter, this.likeAdapter);
+    this.getPostsUseCase      = new GetPostsUseCase(this.postAdapter, this.commentAdapter, this.likeAdapter, this.userAdapter);
     this.getPostByIdUseCase   = new GetPostByIdUseCase(this.postAdapter, this.commentAdapter, this.likeAdapter);
     this.createCommentUseCase = new CreateCommentUseCase(this.commentAdapter);
     this.toggleLikeUseCase    = new ToggleLikeUseCase(this.likeAdapter);
@@ -72,14 +72,37 @@ export class PostController {
    * Obtener lista de posts con paginación
    */
   public getPosts = async (req: Request): Promise<{ status: number; data: any }> => {
+    // Extraemos limit y offset fuera del try/catch para poder usarlos en ambos bloques
+    const { limit = 10, offset = 0 } = req.query;
+    const limitNum = Number(limit);
+    const offsetNum = Number(offset);
+    
     try {
-      const { limit = 10, offset = 0 } = req.query;
-      const posts = await this.getPostsUseCase.execute(Number(limit), Number(offset));
+      const posts = await this.getPostsUseCase.execute(limitNum, offsetNum);
       
-      return { status: 200, data: posts };
+      // Incluso si el array está vacío, devolvemos 200 OK
+      return { 
+        status: 200, 
+        data: {
+          posts,
+          total: posts.length,
+          pagina: Math.floor(offsetNum / limitNum) + 1,
+          porPagina: limitNum
+        } 
+      };
     
     } catch (error) {
-      return { status: 500, data: { message: 'Error al obtener las publicaciones' } };
+      console.error('Error en PostController.getPosts:', error);
+      return { 
+        status: 500, 
+        data: { 
+          message: 'Error al obtener las publicaciones',
+          posts: [],
+          total: 0,
+          pagina: 1,
+          porPagina: limitNum
+        } 
+      };
     }
   }
 
