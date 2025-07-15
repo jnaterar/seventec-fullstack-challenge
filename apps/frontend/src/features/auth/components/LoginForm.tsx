@@ -64,6 +64,8 @@ export const LoginForm: React.FC = () => {
             autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            helperText="Ingresa el correo con el que te registraste"
           />
           
           <TextField
@@ -77,6 +79,7 @@ export const LoginForm: React.FC = () => {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            helperText="Ingresa tu contraseña personal"
           />
           
           <Button

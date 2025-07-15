@@ -59,7 +59,7 @@ export class PostController {
     this.notificationService = new NotificationService(this.userAdapter, new NotificationAdapter());
 
     // Inicializar casos de usos
-    this.createPostUseCase    = new CreatePostUseCase(this.postAdapter, this.notificationService);
+    this.createPostUseCase    = new CreatePostUseCase(this.postAdapter, this.userAdapter, this.notificationService);
     this.updatePostUseCase    = new UpdatePostUseCase(this.postAdapter, this.notificationService);
     this.deletePostUseCase    = new DeletePostUseCase(this.postAdapter);
     this.getPostsUseCase      = new GetPostsUseCase(this.postAdapter, this.commentAdapter, this.likeAdapter, this.userAdapter);

@@ -5,6 +5,7 @@ import { UserFirestoreRepository } from '@backend/infrastructure/persistence/fir
 import { CreateUserDto, UserResponseDto, UpdateUserDto, UserHttpMapper } from '@backend/infrastructure/http/mappers/user.mapper';
 import { CreateUserUseCase, UserAlreadyExistsError, InvalidUserDataError } from '@backend/core/application/use-cases/create-user.use-case';
 import { UpdateUserProfileUseCase } from '@backend/core/application/use-cases/update-user-profile.use-case';
+import { SaveUserFcmTokenUseCase } from '@backend/core/application/use-cases/save-user-fcm-token.use-case';
 import { UpdateProfileDto } from '@backend/infrastructure/http/dtos/update-profile.dto';
 
 /**
@@ -16,6 +17,7 @@ export class UserController {
   // Casos de uso
   private readonly createUserUseCase : CreateUserUseCase;
   private readonly updateUserProfileUseCase : UpdateUserProfileUseCase;
+  private readonly saveUserFcmTokenUseCase : SaveUserFcmTokenUseCase;
 
   private static instance: UserController;
   
@@ -29,6 +31,7 @@ export class UserController {
     // Inicializar casos de uso
     this.createUserUseCase = new CreateUserUseCase(this.userAdapter);
     this.updateUserProfileUseCase = new UpdateUserProfileUseCase(this.userAdapter);
+    this.saveUserFcmTokenUseCase = new SaveUserFcmTokenUseCase(this.userAdapter);
   }
 
   /**
@@ -399,6 +402,63 @@ export class UserController {
         status: 500, 
         data: { message: 'Error interno del servidor' },
         error: error.message || 'Error desconocido' 
+      };
+    }
+  };
+
+  /**
+   * Guarda un token FCM para notificaciones push del usuario autenticado
+   */
+  public saveUserFcmToken = async (req: Request): Promise<{ status: number; data: { message: string; success: boolean; }, error?: string }> => {
+    try {
+      // Obtener el token del cuerpo de la solicitud
+      const { token } = req.body;
+      
+      if (!token) {
+        return {
+          status: 400,
+          data: {
+            message: 'No se proporcionó un token válido',
+            success: false
+          }
+        };
+      }
+      
+      // Obtener el ID del usuario de la solicitud autenticada
+      const authUser = (req as any).user;
+      
+      if (!authUser || !authUser.uid) {
+        return {
+          status: 401,
+          data: {
+            message: 'No autorizado',
+            success: false
+          }
+        };
+      }
+      
+      console.log(`[FCM] Guardando token para usuario ${authUser.uid}: ${token.substring(0, 15)}...`);
+      
+      // Guardar el token FCM
+      await this.saveUserFcmTokenUseCase.execute(authUser.uid, token);
+      
+      return {
+        status: 200,
+        data: {
+          message: 'Token FCM guardado correctamente',
+          success: true
+        }
+      };
+    } catch (error) {
+      console.error('Error al guardar el token FCM:', error);
+      
+      return {
+        status: 500,
+        data: {
+          message: 'Error al guardar el token FCM',
+          success: false
+        },
+        error: error instanceof Error ? error.message : 'Error desconocido'
       };
     }
   };

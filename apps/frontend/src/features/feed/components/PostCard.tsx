@@ -10,13 +10,12 @@ import {
   Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
   Comment as CommentIcon,
-  Share as ShareIcon,
   MoreVert as MoreVertIcon,
   Send as SendIcon,
   Delete as DeleteIcon,
   Edit as EditIcon
 } from '@mui/icons-material';
-import { Post, CreateCommentDto, PostType } from '../types/post.types';
+import { Post, CreateCommentDto } from '../types/post.types';
 import { postService } from '../services/post.service';
 import { useAuth } from '../../../shared/context/AuthContext';
 import { EditPostForm } from './EditPostForm';
@@ -236,18 +235,29 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
       onUpdatePost(updatedPost);
       
       setNewComment('');
+      
+      // Notificación de éxito
+      setNotification({
+        message: '¡Comentario publicado con éxito!',
+        type: 'success'
+      });
     } catch (error) {
       console.error('Error al enviar comentario:', error);
+      // Notificación de error
+      setNotification({
+        message: 'No se pudo publicar el comentario. Intente nuevamente.',
+        type: 'error'
+      });
     } finally {
       setSubmittingComment(false);
     }
   };
 
   return (
-    <Card elevation={3}>
+    <Card elevation={3} sx={{ borderRadius: 4 }}>
       <CardHeader
         avatar={
-          <Avatar sx={{ bgcolor: post.tipo === PostType.STORY ? 'primary.main' : 'secondary.main' }}>
+          <Avatar sx={{ bgcolor: 'primary.main' }}>
             {authorInitial}
           </Avatar>
         }
@@ -287,201 +297,241 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
         }
       />
     
-    {/* Imagen de la publicación */}
-    <CardMedia
-      component="img"
-      height="350"
-      image={post.imagen}
-      alt={post.descripcion.substring(0, 20)}
-    />
-    
-    {/* Contenido del post */}
-    <CardContent>
-      <Typography variant="body1">
-        {post.descripcion}
-      </Typography>
-    </CardContent>
-    
-    {/* Acciones (like, comentar, compartir) */}
-    <CardActions sx={{ justifyContent: 'space-between' }}>
-      <Box>
-        <IconButton 
-          aria-label="like" 
-          onClick={handleLikeToggle}
-          disabled={likeLoading || !currentUser}
-        >
-          {likeLoading ? (
-            <CircularProgress size={20} />
-          ) : hasLiked ? (
-            <FavoriteIcon color="error" />
-          ) : (
-            <FavoriteBorderIcon />
-          )}
-        </IconButton>
-        <IconButton aria-label="comentar" onClick={handleCommentToggle}>
-          <CommentIcon />
-        </IconButton>
-        <IconButton aria-label="compartir">
-          <ShareIcon />
-        </IconButton>
-      </Box>
-      <Box>
-        <Typography variant="body2" color="text.secondary">
-          {likesCount} {likesCount === 1 ? 'Me gusta' : 'Me gustas'} • {post.comentarios?.length || 0} Comentarios
+      {/* Imagen de la publicación */}
+      <CardMedia
+        component="img"
+        height="350"
+        image={post.imagen}
+        alt={post.descripcion.substring(0, 20)}
+      />
+      
+      {/* Contenido del post */}
+      <CardContent>
+        <Typography variant="body1">
+          {post.descripcion}
         </Typography>
-      </Box>
-    </CardActions>
-    
-    {/* Sección de comentarios (condicional) */}
-    {showComments && (
-      <Box sx={{ px: 2, pb: 2 }}>
-        <Divider sx={{ mb: 2 }} />
-        
-        {/* Comentarios existentes */}
-        <Box sx={{ mb: 2 }}>
-          {post.comentarios && post.comentarios.length > 0 ? (
-            post.comentarios.map((comment) => (
-              <Box key={comment.id} sx={{ mb: 1.5 }}>
-                <Box display="flex" gap={1}>
-                  <Avatar sx={{ width: 30, height: 30 }}>
-                    {comment.autor?.nombre?.charAt(0).toUpperCase() || 'U'}
-                  </Avatar>
-                  <Box>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Typography variant="subtitle2" fontWeight={500}>
-                        {comment.autor?.nombre || 'Usuario'}
+      </CardContent>
+      
+      {/* Acciones (like, comentar) */}
+      <CardActions sx={{ p: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-around', width: '100%', borderTop: '1px solid #ccc', mx: 1.5 }}>
+          <IconButton 
+            aria-label="like" 
+            onClick={handleLikeToggle}
+            disabled={likeLoading || !currentUser}
+            sx={{ 
+              width: '40%',
+              borderRadius: 1,
+              my: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover', // Color de fondo al hacer hover
+                '& .MuiTypography-root': {  // Esto selecciona el Typography hijo
+                  color: 'primary.main'
+                }
+              }
+            }}          
+          >
+            {likeLoading ? (
+              <CircularProgress size={20} />
+            ) : hasLiked ? (
+              <FavoriteIcon color="error" />
+            ) : (
+              <FavoriteBorderIcon />
+            )}
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{
+                ml: 0.5,
+                transition: 'color 0.2s ease-in-out'
+              }} 
+            >            
+              Me gusta
+            </Typography>
+          </IconButton>
+
+          <IconButton 
+            aria-label="comentar" 
+            onClick={handleCommentToggle}
+            sx={{ 
+              width: '40%',
+              borderRadius: 1,
+              my: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover', // Color de fondo al hacer hover
+                '& .MuiTypography-root': {  // Esto selecciona el Typography hijo
+                  color: 'primary.main'
+                }
+              }
+            }}            
+          >
+            <CommentIcon /> 
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{
+                ml: 0.5,
+                transition: 'color 0.2s ease-in-out'
+              }} 
+            >
+              Comentar
+            </Typography>
+          </IconButton>
+        </Box>
+      </CardActions>
+      
+      {/* Sección de comentarios (condicional) */}
+      {showComments && (
+        <Box sx={{ px: 2, pb: 2 }}>
+          <Divider sx={{ mb: 2 }} />
+          
+          {/* Comentarios existentes */}
+          <Box sx={{ mb: 2 }}>
+            {post.comentarios && post.comentarios.length > 0 ? (
+              post.comentarios.map((comment) => (
+                <Box key={comment.id} sx={{ mb: 1.5 }}>
+                  <Box display="flex" gap={1}>
+                    <Avatar sx={{ width: 30, height: 30 }}>
+                      {comment.autor?.nombre?.charAt(0).toUpperCase() || 'U'}
+                    </Avatar>
+                    <Box>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="subtitle2" fontWeight={500}>
+                          {comment.autor?.nombre || 'Usuario'}
+                        </Typography>
+                        {comment.autor?.roles?.map(role => (
+                          <Chip 
+                            key={role} 
+                            label={role} 
+                            size="small" 
+                            variant="outlined"
+                            color={role === 'organizador' ? 'primary' : 'default'}
+                            sx={{ height: 16, fontSize: '0.6rem' }}
+                          />
+                        ))}
+                      </Box>
+                      <Typography variant="body2">{comment.contenido}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {comment.fechaRelativa}
                       </Typography>
-                      {comment.autor?.roles?.map(role => (
-                        <Chip 
-                          key={role} 
-                          label={role} 
-                          size="small" 
-                          variant="outlined"
-                          color={role === 'organizador' ? 'primary' : 'default'}
-                          sx={{ height: 16, fontSize: '0.6rem' }}
-                        />
-                      ))}
                     </Box>
-                    <Typography variant="body2">{comment.contenido}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {comment.fechaRelativa}
-                    </Typography>
                   </Box>
                 </Box>
+              ))
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                No hay comentarios aún. ¡Sé el primero en comentar!
+              </Typography>
+            )}
+          </Box>
+          
+          {/* Formulario para nuevo comentario */}
+          {currentUser && (
+            <Box display="flex" gap={1} alignItems="flex-start">
+              <Avatar sx={{ width: 35, height: 35 }}>
+                {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase() || 'U'}
+              </Avatar>
+              <Box flexGrow={1}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  placeholder="Escribe un comentario..."
+                  value={newComment}
+                  onChange={handleCommentChange}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmitComment();
+                    }
+                  }}
+                  helperText="Presiona Enter para enviar tu comentario o haz clic en el botón"
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton 
+                        size="small" 
+                        onClick={handleSubmitComment}
+                        disabled={submittingComment || !newComment.trim()}
+                        title="Enviar comentario"
+                      >
+                        {submittingComment ? <CircularProgress size={20} /> : <SendIcon />}
+                      </IconButton>
+                    ),
+                  }}
+                />
               </Box>
-            ))
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-              No hay comentarios aún. ¡Sé el primero en comentar!
-            </Typography>
+            </Box>
           )}
         </Box>
-        
-        {/* Formulario para nuevo comentario */}
-        {currentUser && (
-          <Box display="flex" gap={1} alignItems="flex-start">
-            <Avatar sx={{ width: 35, height: 35 }}>
-              {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase() || 'U'}
-            </Avatar>
-            <Box flexGrow={1}>
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                placeholder="Escribe un comentario..."
-                value={newComment}
-                onChange={handleCommentChange}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmitComment();
-                  }
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton 
-                      size="small" 
-                      onClick={handleSubmitComment}
-                      disabled={submittingComment || !newComment.trim()}
-                    >
-                      {submittingComment ? <CircularProgress size={20} /> : <SendIcon />}
-                    </IconButton>
-                  ),
-                }}
-              />
-            </Box>
-          </Box>
-        )}
-      </Box>
-    )}
-    
-    {/* Menú de opciones para el autor o administrador */}
-    <Menu
-      id="post-options-menu"
-      anchorEl={anchorEl}
-      open={Boolean(anchorEl)}
-      onClose={handleCloseMenu}
-    >
-      <MenuItem onClick={handleEditPost}>
-        <EditIcon fontSize="small" sx={{ mr: 1 }} />
-        Editar
-      </MenuItem>
-      <MenuItem onClick={handleOpenConfirmDialog}>
-        <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-        Eliminar
-      </MenuItem>
-    </Menu>
-        
-    {/* Diálogo de confirmación para eliminar post */}
-    <Dialog
-      open={confirmDialogOpen}
-      onClose={handleCloseConfirmDialog}
-      aria-labelledby="alert-dialog-title"
-      aria-describedby="alert-dialog-description"
-    >
-      <DialogTitle id="alert-dialog-title">
-        Eliminar publicación
-      </DialogTitle>
-      <DialogContent>
-        <DialogContentText id="alert-dialog-description">
-          ¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleCloseConfirmDialog} color="primary">
-          Cancelar
-        </Button>
-        <Button onClick={handleDeletePost} color="error" autoFocus>
-          Eliminar
-        </Button>
-      </DialogActions>
-    </Dialog>
-    
-    {/* Formulario de edición */}
-    <EditPostForm 
-      post={post}
-      open={editDialogOpen}
-      onClose={() => setEditDialogOpen(false)}
-      onPostUpdated={handlePostUpdated}
-    />
-    
-    {/* Notificación de éxito/error */}
-    <Snackbar 
-      open={notification !== null} 
-      autoHideDuration={5000} 
-      onClose={() => setNotification(null)}
-      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      key={notification?.message} // Asegura que se vuelva a renderizar cuando cambie el mensaje
-    >
-      <Alert 
-        onClose={() => setNotification(null)} 
-        severity={notification?.type || 'success'} 
-        sx={{ width: '100%' }}
-        variant="filled"
-        elevation={6}
+      )}
+      
+      {/* Menú de opciones para el autor o administrador */}
+      <Menu
+        id="post-options-menu"
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseMenu}
       >
-        {notification?.message || ''}
-      </Alert>
-    </Snackbar>
-  </Card>
+        <MenuItem onClick={handleEditPost}>
+          <EditIcon fontSize="small" sx={{ mr: 1 }} />
+          Editar
+        </MenuItem>
+        <MenuItem onClick={handleOpenConfirmDialog}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Eliminar
+        </MenuItem>
+      </Menu>
+          
+      {/* Diálogo de confirmación para eliminar post */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCloseConfirmDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Eliminar publicación
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            ¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirmDialog} color="primary">
+            Cancelar
+          </Button>
+          <Button onClick={handleDeletePost} color="error" autoFocus>
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Formulario de edición */}
+      <EditPostForm 
+        post={post}
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        onPostUpdated={handlePostUpdated}
+      />
+      
+      {/* Notificación de éxito/error */}
+      <Snackbar 
+        open={notification !== null} 
+        autoHideDuration={5000} 
+        onClose={() => setNotification(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        key={notification?.message} // Asegura que se vuelva a renderizar cuando cambie el mensaje
+      >
+        <Alert 
+          onClose={() => setNotification(null)} 
+          severity={notification?.type || 'success'} 
+          sx={{ width: '100%' }}
+          variant="filled"
+          elevation={6}
+        >
+          {notification?.message || ''}
+        </Alert>
+      </Snackbar>
+    </Card>
 )};

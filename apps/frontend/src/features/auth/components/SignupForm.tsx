@@ -9,7 +9,8 @@ import {
   Container, 
   Link as MuiLink,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Snackbar
 } from '@mui/material';
 
 export const SignupForm: React.FC = () => {
@@ -19,11 +20,17 @@ export const SignupForm: React.FC = () => {
   const [nombre, setNombre] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const { signup } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password.length < 6) {
+      return setError('La contraseña debe tener al menos 6 caracteres');
+    }
 
     if (password !== confirmPassword) {
       return setError('Las contraseñas no coinciden');
@@ -33,7 +40,15 @@ export const SignupForm: React.FC = () => {
       setError('');
       setLoading(true);
       await signup(email, password, nombre);
-      navigate('/');
+      
+      // Mostrar mensaje de éxito
+      setSuccessMessage(`¡Bienvenido ${nombre}! Tu cuenta ha sido creada con éxito.`);
+      setSuccess(true);
+      
+      // Esperar un momento para que el usuario vea el mensaje antes de redirigir
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
     } catch (error) {
       setError('Error al crear la cuenta. Intenta de nuevo.');
       console.error('Error al registrarse:', error);
@@ -61,6 +76,24 @@ export const SignupForm: React.FC = () => {
             {error}
           </Alert>
         )}
+
+        {/* Notificación de éxito */}
+        <Snackbar
+          open={success}
+          autoHideDuration={6000}
+          onClose={() => setSuccess(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={() => setSuccess(false)} 
+            severity="success" 
+            sx={{ width: '100%' }}
+            variant="filled"
+            elevation={6}
+          >
+            {successMessage}
+          </Alert>
+        </Snackbar>
         
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
           <TextField
@@ -74,6 +107,7 @@ export const SignupForm: React.FC = () => {
             autoFocus
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
+            helperText="Ingresa tu nombre y apellido"
           />
           
           <TextField
@@ -86,6 +120,8 @@ export const SignupForm: React.FC = () => {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            helperText="Formato: ejemplo@dominio.com"
+            type="email"
           />
           
           <TextField
@@ -99,6 +135,9 @@ export const SignupForm: React.FC = () => {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            helperText="Mínimo 6 caracteres"
+            error={password.length > 0 && password.length < 6}
+            inputProps={{ minLength: 6 }}
           />
           
           <TextField
@@ -112,6 +151,8 @@ export const SignupForm: React.FC = () => {
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            helperText="Debe coincidir exactamente con la contraseña anterior"
+            error={confirmPassword !== "" && password !== confirmPassword}
           />
           
           <Button
@@ -128,7 +169,7 @@ export const SignupForm: React.FC = () => {
             <Typography variant="body2">
               ¿Ya tienes una cuenta?{' '}
               <MuiLink component={Link} to="/login" variant="body2">
-                Inicia Sesión
+                Inicia sesión
               </MuiLink>
             </Typography>
           </Box>

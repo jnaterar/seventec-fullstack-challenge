@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   USERS: {
     PROFILE: `${API_BASE_URL}/users/profile`,
     BY_ID: (id: string) => `${API_BASE_URL}/users/${id}`,
+    FCM_TOKEN: `${API_BASE_URL}/users/fcm-token`,
   },
   POSTS: `${API_BASE_URL}/posts`,
 };

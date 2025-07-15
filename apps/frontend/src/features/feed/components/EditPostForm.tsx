@@ -128,9 +128,11 @@ export const EditPostForm: React.FC<EditPostFormProps> = ({
             rows={3}
             variant="outlined"
             placeholder="¿Qué quieres compartir?"
+            label="Descripción"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             margin="normal"
+            helperText="Modifica la descripción de tu publicación. Los cambios no generarán nuevas notificaciones."
           />
           
           {/* Campo para URL de imagen */}
@@ -150,7 +152,7 @@ export const EditPostForm: React.FC<EditPostFormProps> = ({
                 </IconButton>
               ) : null
             }}
-            helperText="Ingresa la URL de una imagen almacenada en Storage"
+            helperText="Ingresa la URL completa de una nueva imagen si deseas cambiarla (https://...)"
           />
           
           {/* Vista previa de imagen (solo si hay una URL) */}

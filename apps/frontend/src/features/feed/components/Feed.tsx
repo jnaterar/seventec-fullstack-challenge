@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Box, Typography, CircularProgress, Divider, 
-  Container, Alert, Button, Skeleton, Fade, Paper
+  Box, Typography, CircularProgress, 
+  Container, Alert, Button, Skeleton, Fade, Paper,
+  Tooltip
 } from '@mui/material';
 import { Refresh as RefreshIcon, Add as AddIcon } from '@mui/icons-material';
 import { Post, PostType } from '../types/post.types';
@@ -164,27 +165,14 @@ export const Feed: React.FC = () => {
     ));
   };
 
+  // Verificar si el usuario puede publicar
+  const canPublish = currentUser && (currentUser.roles?.includes(UserRole.ADMIN) || currentUser.roles?.includes(UserRole.ORGANIZER));
+
   return (
     <Container maxWidth="md">
       <Box sx={{ py: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
-            Publicaciones
-          </Typography>
-          <Button
-            startIcon={<RefreshIcon />}
-            onClick={handleRefresh}
-            disabled={loading}
-            variant="outlined"
-          >
-            Actualizar
-          </Button>
-        </Box>
-
-        <Divider sx={{ mb: 3 }} />
-        
-        {/* Botón para mostrar el formulario (visible para todos pero funcionará solo para organizadores) */}
-        {currentUser && (
+        {/* Botón para mostrar el formulario (visible para administradores y organizadores) */}
+        {canPublish && (
           <Box mb={3}>
             {!showPostForm ? (
               <Button
@@ -220,6 +208,19 @@ export const Feed: React.FC = () => {
             )}
           </Box>
         )}
+
+        <Box sx={{ display: 'flex', justifyContent: 'end', alignItems: 'center', mb: 3 }}>
+          <Tooltip title="Actualizar publicaciones">
+            <Button
+              startIcon={<RefreshIcon />}
+              onClick={handleRefresh}
+              disabled={loading}
+              variant="contained"
+            >
+              Actualizar
+            </Button>
+          </Tooltip>
+        </Box>
         
         {/* Mensaje de error */}
         {error && (
@@ -239,13 +240,15 @@ export const Feed: React.FC = () => {
           renderSkeletons()
         ) : posts.length > 0 ? (
           <Box>
-            {posts.map(post => (
-              <PostCard 
-                key={post.id} 
-                post={post} 
-                onUpdatePost={handleUpdatePost} 
-                onDeletePost={handleDeletePost}
-              />
+            {posts.map((post) => (
+              <Box key={post.id} sx={{ mb: 3 }}>
+                <PostCard
+                  key={post.id} 
+                  post={post} 
+                  onUpdatePost={handleUpdatePost} 
+                  onDeletePost={handleDeletePost}
+                />
+              </Box>
             ))}
             
             {/* Botón de cargar más */}

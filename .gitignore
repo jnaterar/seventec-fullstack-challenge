@@ -86,7 +86,11 @@ Thumbs.db
 # NX workspace data and cache
 .nx/
 
-# Firebase
-firebase-keys.json
+# Firebase frontend
 firebase-web-keys.json
+apps/frontend/public/firebase-web-keys.json
+
+# Firebase backend
+firebase-keys.json
+apps/backend/firebase-keys.json
 functions/service-account-key.json

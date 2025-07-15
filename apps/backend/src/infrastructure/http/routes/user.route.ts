@@ -28,6 +28,13 @@ router.put(
   routeHandler(controller.updateUserProfile)
 );
 
+// Guardar token FCM para notificaciones push
+router.post(
+  '/fcm-token',
+  authenticateToken,
+  routeHandler(controller.saveUserFcmToken)
+);
+
 // Obtener todos los usuarios
 router.get(
   '/',

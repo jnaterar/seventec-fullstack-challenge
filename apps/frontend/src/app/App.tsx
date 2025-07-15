@@ -9,6 +9,7 @@ import { ForgotPassword } from '@/features/auth/components/ForgotPassword';
 import UserProfile from '@/features/profile/components/UserProfile';
 import { Feed } from '@/features/feed';
 import { useEffect } from 'react';
+import { NotificationService } from '@/services/notifications.service';
 
 // Componente para mostrar mientras se verifica la autenticación
 const AuthCheck = ({ children }: { children: React.ReactNode }) => {
@@ -27,17 +28,36 @@ const AuthCheck = ({ children }: { children: React.ReactNode }) => {
 
 export function App() {
   const location = useLocation();
+  const { currentUser } = useAuth();
 
   // Verificar autenticación en cada cambio de ruta
   useEffect(() => {
     // Aquí podrías verificar el token con el servidor si es necesario
   }, [location.pathname]);
+  
+  // Inicializar el servicio de notificaciones cuando el usuario esté autenticado
+  useEffect(() => {
+    if (currentUser) {
+      console.log('Inicializando servicio de notificaciones para el usuario:', currentUser.email);
+      // Inicializar el servicio de notificaciones y solicitar permisos
+      const notificationService = NotificationService.getInstance();
+      notificationService.requestPermissionAndRegisterToken()
+        .then(success => {
+          if (success) {
+            console.log('Token FCM registrado exitosamente');
+          } else {
+            console.warn('No se pudo registrar el token FCM');
+          }
+        })
+        .catch(error => console.error('Error al registrar token FCM:', error));
+    }
+  }, [currentUser]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AuthCheck>
         <Navbar />
-        <Box component="main" sx={{ flexGrow: 1, py: 4, px: { xs: 2, sm: 3 } }}>
+        <Box component="main" sx={{ flexGrow: 1, py: 4, px: { xs: 2, sm: 3 }, mt: '64px' }}>
           <Container maxWidth="lg">
             <Routes>
               {/* Rutas públicas - solo accesibles para usuarios no autenticados */}
@@ -51,8 +71,6 @@ export function App() {
               <Route element={<ProtectedRoute />}>
                 <Route index element={<Feed />} />
                 <Route path="/profile" element={<UserProfile />} />
-                {/* Alias para evitar confusiones con endpoint backend */}
-                <Route path="/users/profile" element={<UserProfile />} />
                 
                 {/* Ejemplo de ruta con roles específicos */}
                 <Route path="/admin" element={

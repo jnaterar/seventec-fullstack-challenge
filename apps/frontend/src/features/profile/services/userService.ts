@@ -23,6 +23,18 @@ export const userService = {
     const { data } = await api.put(API_ENDPOINTS.USERS.PROFILE, profileData);
     return data.profile || data.user;
   },
+
+  // Guardar token FCM para notificaciones push
+  async saveUserFcmToken(token: string): Promise<boolean> {
+    try {
+      const { data } = await api.post(API_ENDPOINTS.USERS.FCM_TOKEN, { token });
+      console.log('Token FCM guardado correctamente:', data);
+      return true;
+    } catch (error) {
+      console.error('Error al guardar el token FCM:', error);
+      return false;
+    }
+  },
 };
 
 export type UserProfile = IUserProfile;

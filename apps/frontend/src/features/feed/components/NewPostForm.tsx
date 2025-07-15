@@ -135,8 +135,8 @@ export const NewPostForm: React.FC<NewPostFormProps> = ({ onPostCreated, isVisib
             </Select>
             <FormHelperText>
               {tipo === PostType.STORY 
-                ? 'Las historias son visibles por 24 horas' 
-                : 'Las publicaciones normales no caducan'}
+                ? 'Las historias son temporales y automáticamente caducan después de 24 horas' 
+                : 'Las publicaciones normales permanecen visibles indefinidamente hasta que sean eliminadas'}
             </FormHelperText>
           </FormControl>
           
@@ -147,9 +147,11 @@ export const NewPostForm: React.FC<NewPostFormProps> = ({ onPostCreated, isVisib
             rows={3}
             variant="outlined"
             placeholder="¿Qué quieres compartir?"
+            label="Descripción"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             margin="normal"
+            helperText="Describe detalladamente tu publicación. Los participantes recibirán notificaciones con esta información."
           />
           
           {/* Campo para URL de imagen */}
@@ -169,7 +171,7 @@ export const NewPostForm: React.FC<NewPostFormProps> = ({ onPostCreated, isVisib
                 </IconButton>
               ) : null
             }}
-            helperText="Ingresa la URL de una imagen almacenada en Storage"
+            helperText="Ingresa la URL completa de una imagen (https://...). Usa imágenes previamente subidas a un servicio de almacenamiento"
           />
           
           {/* Vista previa de imagen (solo si hay una URL) */}
@@ -210,16 +212,17 @@ export const NewPostForm: React.FC<NewPostFormProps> = ({ onPostCreated, isVisib
           {/* Nota sobre notificaciones push */}
           <Box sx={{ 
             display: 'flex', 
-            alignItems: 'center',
-            bgcolor: 'info.light', 
-            color: 'info.contrastText',
-            borderRadius: 1,
-            p: 1.5,
+            alignItems: 'flex-start',
+            bgcolor: 'rgba(90, 43, 229, 0.08)',
+            color: '#5A2BE5',
+            borderRadius: 2,
+            p: 2,
             mb: 2,
-            mt: 1 
+            mt: 1,
+            border: '1px solid rgba(90, 43, 229, 0.2)'
           }}>
-            <NotificationsIcon sx={{ mr: 1 }} />
-            <Typography variant="body2">
+            <NotificationsIcon sx={{ mr: 1.5, mt: 0.25, color: '#5A2BE5' }} />
+            <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
               Al crear una publicación, se enviará automáticamente una notificación push a todos los usuarios con rol de participante.
             </Typography>
           </Box>

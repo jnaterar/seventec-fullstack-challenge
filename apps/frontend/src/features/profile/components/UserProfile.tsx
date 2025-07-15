@@ -151,26 +151,41 @@ const UserProfile = () => {
         </Button>
       </Box>
 
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
-      
       {/* Snackbar para mensaje de éxito */}
       <Snackbar 
         open={!!success} 
         autoHideDuration={6000} 
         onClose={() => setSuccess('')}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        key="success-notification"
       >
         <Alert 
           onClose={() => setSuccess('')} 
           severity="success" 
           variant="filled"
+          elevation={6}
           sx={{ width: '100%' }}
         >
           {success}
+        </Alert>
+      </Snackbar>
+
+      {/* Snackbar para mensaje de error */}
+      <Snackbar 
+        open={!!error} 
+        autoHideDuration={6000} 
+        onClose={() => setError('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        key="error-notification"
+      >
+        <Alert 
+          onClose={() => setError('')} 
+          severity="error" 
+          variant="filled"
+          elevation={6}
+          sx={{ width: '100%' }}
+        >
+          {error}
         </Alert>
       </Snackbar>
 
@@ -196,10 +211,10 @@ const UserProfile = () => {
                 onChange={handleFieldChange('nombre')}
                 required
                 variant="outlined"
+                helperText="Tu nombre completo como deseas que aparezca en la plataforma"
                 InputProps={{
                   sx: { borderRadius: 1.5 }
                 }}
-                helperText="Tu nombre completo"
               />
 
               <FormControl fullWidth variant="outlined">
@@ -220,7 +235,7 @@ const UserProfile = () => {
                   ))}
                 </Select>
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, ml: 1.5 }}>
-                  Selecciona tu rol en el sistema
+                  Selecciona tu rol en el sistema (organizador o participante). Esto determinará qué acciones puedes realizar en la plataforma.
                 </Typography>
               </FormControl>
             </Box>
@@ -232,7 +247,7 @@ const UserProfile = () => {
             p: 3, 
             borderRadius: 2,
             borderLeft: '4px solid',
-            borderColor: 'secondary.main'
+            borderColor: 'primary.main'
           }}>
             <Typography variant="h6" gutterBottom color="text.secondary" sx={{ mb: 2 }}>
               Información de Alergias
@@ -246,20 +261,18 @@ const UserProfile = () => {
                 onChange={e => setNewAllergy(e.target.value)}
                 fullWidth
                 variant="outlined"
-                InputProps={{
-                  sx: { borderRadius: 1.5 }
-                }}
+                helperText="Especifica cualquier alergia alimentaria que tengas (ej: nueces, mariscos, lactosa)"
               />
               <IconButton 
-                color="secondary" 
+                color="primary"
                 onClick={handleAddAllergy} 
                 aria-label="add allergy"
                 sx={{ 
-                  bgcolor: 'secondary.main', 
-                  color: 'white',
-                  '&:hover': { bgcolor: 'secondary.dark' },
                   height: 40,
-                  width: 40
+                  width: 40,
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '1.25rem'
+                  }
                 }}
               >
                 <AddIcon />

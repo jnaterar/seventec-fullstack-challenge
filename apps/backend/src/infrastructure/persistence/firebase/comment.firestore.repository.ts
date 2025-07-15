@@ -47,7 +47,16 @@ export class CommentFirestoreRepository implements CommentPort {
     createdAt: Date;
     updatedAt: Date;
   }): Promise<any> {
-    const docRef = await this.collection.add(comment);
+    // Convertir la instancia de Comment a un objeto plano para Firestore
+    const plainComment = {
+      postId: comment.postId,
+      userId: comment.userId,
+      content: comment.content,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt
+    };
+    
+    const docRef = await this.collection.add(plainComment);
     return docRef.id;
   }
 
