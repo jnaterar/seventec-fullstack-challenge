@@ -35,5 +35,8 @@ router.post('/:postId/comments',
 router.post('/:postId/likes', 
     routeHandler(controller.toggleLike)
 );
+router.get('/:postId/likes', 
+    routeHandler(controller.getPostLikes)
+);
 
 export { router as PostRouter };

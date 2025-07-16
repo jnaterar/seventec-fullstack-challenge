@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { AuthProvider } from '@/shared/context/AuthContext';
+import { AuthProvider } from '@frontend/shared/context/AuthContext';
 import App from './app/App';
 
 const theme = createTheme({

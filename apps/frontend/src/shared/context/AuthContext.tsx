@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API_ENDPOINTS } from '@/config/api';
-import { getAuthInstance as getFirebaseAuth } from '@/config/firebase-config';
+import { useNavigate } from 'react-router-dom';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut, Auth } from 'firebase/auth';
+import { getAuthInstance as getFirebaseAuth } from '@frontend/config/firebase-config';
+import { API_ENDPOINTS } from '@frontend/config/api';
+import { logger } from '@frontend/shared/utils/logger'; 
 
 // Variable para almacenar la instancia de autenticación
 let authInstance: Auth | null = null;
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         authInstance = await initializeAuth();
         setAuthInitialized(true);
       } catch (error) {
-        console.error('Error al inicializar autenticación:', error);
+        logger.error('Error al inicializar autenticación:', error);
       }
     };
 
@@ -81,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const userData = JSON.parse(savedUser);
             savedRoles = userData.roles || [];
           } catch (e) {
-            console.error('Error al recuperar roles guardados:', e);
+            logger.error('Error al recuperar roles guardados:', e);
           }
         }
         
@@ -119,7 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           roles: userData.roles || []
         });
       } catch (error) {
-        console.error('Error al procesar datos del usuario:', error);
+        logger.error('Error al procesar datos del usuario:', error);
       } finally {
         setLoading(false);
       }
@@ -172,7 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const redirectTo = searchParams.get('redirect') || '/';
       navigate(redirectTo, { replace: true });
     } catch (error: any) {
-      console.error('Error al iniciar sesión:', error);
+      logger.error('Error al iniciar sesión:', error);
       // Limpiar el token en caso de error
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -206,7 +207,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         navigate('/login', { replace: true });
       }
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      logger.error('Error al cerrar sesión:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -231,7 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               });
             }
           } catch (error) {
-            console.error('Error al recuperar roles del usuario:', error);
+            logger.error('Error al recuperar roles del usuario:', error);
           }
         }
       }
@@ -256,7 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         navigate('/');
       }
     } catch (error) {
-      console.error('Error en el registro:', error);
+      logger.error('Error en el registro:', error);
       throw error;
     }
   };
@@ -265,7 +266,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await axios.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, { email });
     } catch (error) {
-      console.error('Error al solicitar restablecimiento de contraseña:', error);
+      logger.error('Error al solicitar restablecimiento de contraseña:', error);
       throw error;
     }
   };

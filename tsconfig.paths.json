@@ -3,9 +3,6 @@
     "baseUrl": ".",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "@/*": ["./apps/frontend/src/*"],
-      "@shared/*": ["./shared/*"]
-    }
+    "paths": {}
   }
 }

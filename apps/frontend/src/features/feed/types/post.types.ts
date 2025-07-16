@@ -25,7 +25,7 @@ export interface Post {
     nombre: string;
     roles: string[];
   };
-  likes?: number;
+  likes?: {id: string; nombre: string}[];
   comentarios?: Comment[];
   userHasLiked?: boolean;
 }

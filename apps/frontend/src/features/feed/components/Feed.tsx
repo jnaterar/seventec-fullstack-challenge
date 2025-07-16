@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Box, Typography, CircularProgress, 
-  Container, Alert, Button, Skeleton, Fade, Paper,
-  Tooltip
+  Box, Typography, CircularProgress, Container, Alert, Button, Skeleton, Fade, 
+  Paper, Tooltip 
 } from '@mui/material';
 import { Refresh as RefreshIcon, Add as AddIcon } from '@mui/icons-material';
-import { Post, PostType } from '../types/post.types';
-import { postService } from '../services/post.service';
-import { PostCard } from './PostCard';
-import { NewPostForm } from './NewPostForm';
-import { useAuth } from '../../../shared/context/AuthContext';
-import { UserRole } from '@shared/enums/user-role.enum';
+import { Post, PostType } from '@frontend/features/feed/types/post.types';
+import { postService } from '@frontend/features/feed/services/post.service';
+import { PostCard } from '@frontend/features/feed/components/PostCard';
+import { NewPostForm } from '@frontend/features/feed/components/NewPostForm';
+import { useAuth } from '@frontend/shared/context/AuthContext';
+import { UserRole } from '@enums';
+import { logger } from '@frontend/shared/utils/logger';
 
 export const Feed: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -27,24 +27,50 @@ export const Feed: React.FC = () => {
 
   // Cargar publicaciones
   useEffect(() => {
+    let isMounted = true;
+    let initialLoad = true;
+    let controller: AbortController | null = null;
+    
     const fetchPosts = async () => {
-      setLoading(true);
+      if (import.meta.env.MODE === 'development') {
+        logger.debug('Cargando publicaciones...');
+      }
+      
+      // Solo mostrar loading en la carga inicial
+      if (initialLoad) {
+        setLoading(true);
+      }
+      
       setError(null);
       
       try {
-        // Llamada a la API para obtener publicaciones
-        const response = await postService.getPosts(postsPerPage, 0);
+        // Crear un nuevo AbortController para esta solicitud
+        controller = new AbortController();
+        const signal = controller.signal;
+        
+        // Llamada a la API para obtener publicaciones con soporte para cancelación
+        const response = await postService.getPosts(postsPerPage, 0, signal);
+        
+        if (!isMounted) return;
         
         // Ahora la respuesta siempre tiene la estructura PostsResponse
         setPosts(response.posts);
         setHasMore(response.posts.length < response.total);
+        initialLoad = false;
 
-      } catch (err) {
-        console.error('Error al cargar publicaciones:', err);
+      } catch (err: any) {
+        // Ignorar errores de cancelación
+        if (err.name === 'AbortError' || err.message === 'canceled') {
+          logger.log('Solicitud cancelada');
+          return;
+        }
+        
+        if (!isMounted) return;
+        
+        logger.error('Error al cargar publicaciones:', err);
         setError('No pudimos cargar las publicaciones. Intenta de nuevo más tarde.');
         
         // Cargar datos de prueba cuando no hay conexión al backend
-        // Esto permite que la interfaz funcione sin errores mientras no haya conexión
         const mockPosts: Post[] = [
           {
             id: '1',
@@ -58,40 +84,64 @@ export const Feed: React.FC = () => {
             autor: {
               id: 'user1',
               nombre: 'Usuario de Prueba',
-              roles: ['participant']
+              roles: ['usuario']
             },
-            likes: 5,
+            likes: [
+              { id: 'mock1', nombre: 'Usuario Mock 1' },
+              { id: 'mock2', nombre: 'Usuario Mock 2' },
+              { id: 'mock3', nombre: 'Usuario Mock 3' },
+              { id: 'mock4', nombre: 'Usuario Mock 4' },
+              { id: 'mock5', nombre: 'Usuario Mock 5' },
+              { id: 'mock6', nombre: 'Usuario Mock 6' },
+              { id: 'mock7', nombre: 'Usuario Mock 7' },
+              { id: 'mock8', nombre: 'Usuario Mock 8' },
+              { id: 'mock9', nombre: 'Usuario Mock 9' },
+              { id: 'mock10', nombre: 'Usuario Mock 10' }
+            ],
             comentarios: [],
-            userHasLiked: false
+            userHasLiked: true
           },
           {
             id: '2',
-            imagen: 'https://picsum.photos/id/238/800/600',
-            descripcion: 'Otra publicación de ejemplo para desarrollo sin backend.',
-            fechaCreacion: new Date(),
-            fechaEdicion: new Date(),
-            fechaRelativa: 'hace 5 minutos',
+            imagen: 'https://picsum.photos/id/250/800/600',
+            descripcion: 'Otra publicación de ejemplo para probar la interfaz.',
+            fechaCreacion: new Date(Date.now() - 3600000 * 2), // Hace 2 horas
+            fechaEdicion: new Date(Date.now() - 3600000 * 2),
+            fechaRelativa: 'hace 2 horas',
             userId: 'user2',
             tipo: PostType.STORY,
             autor: {
               id: 'user2',
-              nombre: 'Organizador Demo',
-              roles: ['organizer']
+              nombre: 'Organizador Ejemplo',
+              roles: ['organizador']
             },
-            likes: 10,
+            likes: [
+              { id: 'mock1', nombre: 'Usuario Mock 1' },
+              { id: 'mock2', nombre: 'Usuario Mock 2' }
+            ],
             comentarios: [],
-            userHasLiked: true
+            userHasLiked: false
           }
         ];
         
         setPosts(mockPosts);
         setHasMore(false);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     fetchPosts();
+    
+    // Función de limpieza para cancelar la solicitud pendiente
+    return () => {
+      isMounted = false;
+      if (controller) {
+        controller.abort();
+      }
+    };
   }, [refreshKey]);
 
   // Cargar más publicaciones
@@ -99,7 +149,8 @@ export const Feed: React.FC = () => {
     if (loadingMore || !hasMore) return;
     
     setLoadingMore(true);
-    try {
+    try { 
+      logger.log('setLoadingMore - Cargando más publicaciones...');
       const nextPage = page + 1;
       const offset = (nextPage - 1) * postsPerPage;
       const response = await postService.getPosts(postsPerPage, offset);
@@ -114,7 +165,7 @@ export const Feed: React.FC = () => {
         setHasMore(false);
       }
     } catch (err) {
-      console.error('Error al cargar más publicaciones:', err);
+      logger.error('Error al cargar más publicaciones:', err);
       setError('No pudimos cargar más publicaciones. Intenta de nuevo más tarde.');
       setHasMore(false);
     } finally {
@@ -139,7 +190,13 @@ export const Feed: React.FC = () => {
 
   // Refrescar el feed
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    // Forzar un nuevo renderizado y recargar las publicaciones
+    setPage(1);
+    setPosts([]);
+    // Solo incrementar refreshKey si no hay una carga en curso
+    if (!loading) {
+      setRefreshKey(prev => prev + 1);
+    }
   };
 
   // Cuando se crea una nueva publicación
@@ -168,10 +225,15 @@ export const Feed: React.FC = () => {
   // Verificar si el usuario puede publicar
   const canPublish = currentUser && (currentUser.roles?.includes(UserRole.ADMIN) || currentUser.roles?.includes(UserRole.ORGANIZER));
 
+  if (import.meta.env.MODE === 'development') {
+    logger.debug('Renderizando Feed', { loading, postsCount: posts.length });
+  }
+  
   return (
     <Container maxWidth="md">
-      <Box sx={{ py: 3 }}>
-        {/* Botón para mostrar el formulario (visible para administradores y organizadores) */}
+      {/* Contenedor principal */}
+      <Box sx={{ pt: 0 }}>
+        {/* Botón de crear publicación (visible para administradores y organizadores) */}
         {canPublish && (
           <Box mb={3}>
             {!showPostForm ? (
@@ -209,16 +271,19 @@ export const Feed: React.FC = () => {
           </Box>
         )}
 
+        {/* Botón de actualizar */} 
         <Box sx={{ display: 'flex', justifyContent: 'end', alignItems: 'center', mb: 3 }}>
           <Tooltip title="Actualizar publicaciones">
-            <Button
-              startIcon={<RefreshIcon />}
-              onClick={handleRefresh}
-              disabled={loading}
-              variant="contained"
-            >
-              Actualizar
-            </Button>
+            <span> {/* Wrapper span for the disabled button */}
+              <Button
+                startIcon={<RefreshIcon />}
+                onClick={handleRefresh}
+                disabled={loading}
+                variant="contained"
+              >
+                Actualizar
+              </Button>
+            </span>
           </Tooltip>
         </Box>
         

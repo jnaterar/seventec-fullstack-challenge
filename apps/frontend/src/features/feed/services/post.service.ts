@@ -1,5 +1,6 @@
-import { apiClient } from '@/shared/services/api-client';
-import { Post, CreatePostDto, Comment, CreateCommentDto, PostsResponse } from '../types/post.types';
+import { Post, CreatePostDto, Comment, CreateCommentDto, PostsResponse } from '@frontend/features/feed/types/post.types';
+import { apiClient } from '@frontend/shared/services/api-client';
+import { logger } from '@frontend/shared/utils/logger';
 
 /**
  * Servicio para manejar las operaciones relacionadas con publicaciones
@@ -7,35 +8,22 @@ import { Post, CreatePostDto, Comment, CreateCommentDto, PostsResponse } from '.
 export const postService = {
   /**
    * Obtiene todas las publicaciones con paginación
-   * Normaliza la respuesta para asegurar que siempre tenga la estructura PostsResponse
    */
-  getPosts: async (limit = 10, offset = 0): Promise<PostsResponse> => {
+  getPosts: async (limit = 10, offset = 0, signal?: AbortSignal): Promise<PostsResponse> => {
     try {
-      // Añadir un tiempo de espera para prevenir bloqueos indefinidos
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
-      
+      logger.log('Solicitud de obtención de publicaciones...');
+
       const response = await apiClient.get(`/posts?limit=${limit}&offset=${offset}`, {
-        signal: controller.signal
-      }).finally(() => clearTimeout(timeoutId));
+        signal // Pasar la señal de cancelación a la petición
+      });
       
-      const data = response.data;
-      
-      // Normalizar la respuesta para asegurar estructura PostsResponse
-      if (Array.isArray(data)) {
-        // Si el backend devuelve un array, lo adaptamos a la estructura PostsResponse
-        return {
-          posts: data,
-          total: data.length,
-          pagina: Math.floor(offset / limit) + 1,
-          porPagina: limit
-        };
-      } else if (data && typeof data === 'object' && 'posts' in data) {
-        // Si ya tiene la estructura PostsResponse, la usamos directamente
-        return data;
+      // Aseguramos que la respuesta tenga la estructura correcta
+      if (response.data && Array.isArray(response.data.posts)) {
+        logger.log('Publicaciones obtenidas correctamente');
+        return response.data;
+
       } else {
-        console.warn('Formato de datos inesperado desde el backend:', data);
-        // Si no es ni array ni tiene la estructura correcta, devolvemos una estructura vacía
+        logger.warn('La respuesta del servidor no tiene el formato esperado');
         return {
           posts: [],
           total: 0,
@@ -43,20 +31,31 @@ export const postService = {
           porPagina: limit
         };
       }
-    } catch (error: any) {
-      // Mejor manejo de errores con información detallada
-      if (error.name === 'AbortError') {
-        console.error('La solicitud de publicaciones excedió el tiempo de espera');
-      } else if (error.response) {
-        // Error de respuesta del servidor (4xx, 5xx)
-        console.error(`Error ${error.response.status} al obtener publicaciones:`, 
-                      error.response.data?.message || 'Error desconocido');
-      } else if (error.request) {
-        // La solicitud se realizó pero no se recibió respuesta
-        console.error('No se recibió respuesta del servidor al obtener publicaciones');
+    } catch (error: unknown) {
+      // Manejo de errores con TypeScript seguro
+      if (error instanceof Error) {
+        // Ignorar errores de cancelación
+        if (error.name === 'AbortError' || error.message === 'canceled') {
+          logger.warn('Solicitud de obtención de publicaciones cancelada');
+
+        } else if ('response' in error && error.response) {
+          // Error de respuesta del servidor (4xx, 5xx)
+          const response = error.response as { status?: number; data?: { message?: string } };
+          logger.error(`Error ${response.status || 'desconocido'} al obtener publicaciones:`, 
+            response.data?.message || 'Error desconocido'
+          );
+
+        } else if ('request' in error) {
+          // La solicitud se realizó pero no se recibió respuesta
+          logger.error('No se recibió respuesta del servidor al obtener publicaciones');
+
+        } else {
+          // Error al configurar la solicitud
+          logger.error('Error al configurar la solicitud de publicaciones:', error.message);
+        }
+
       } else {
-        // Error al configurar la solicitud
-        console.error('Error al configurar la solicitud:', error.message);
+        logger.error('Error desconocido al obtener publicaciones');
       }
       
       // En caso de error, devolvemos una estructura vacía
@@ -102,10 +101,48 @@ export const postService = {
 
   /**
    * Da/quita like a una publicación
+   * @returns Un objeto con la lista actualizada de likes y el estado de si el usuario ha dado like
    */
-  toggleLike: async (postId: string, userId: string): Promise<{ likes: number }> => {
+  toggleLike: async (postId: string, userId: string): Promise<{ likes: {id: string; nombre: string}[] }> => {
     const response = await apiClient.post(`/posts/${postId}/likes`, { userId });
     return response.data;
+  },
+  
+  /**
+   * Obtiene la lista de usuarios que dieron like a una publicación
+   */
+  getLikes: async (postId: string): Promise<{id: string; nombre: string}[]> => {
+    try {
+      const response = await apiClient.get(`/posts/${postId}/likes`);
+      return response.data || [];
+    } catch (error: unknown) {
+      // Manejo de errores con TypeScript seguro
+      if (error instanceof Error) {
+        // Ignorar errores de cancelación
+        if (error.name === 'AbortError' || error.message === 'canceled') {
+          logger.debug('Solicitud de likes cancelada');
+          return [];
+        }
+        
+        if ('response' in error && error.response) {
+          // Error de respuesta del servidor (4xx, 5xx)
+          const response = error.response as { status?: number; data?: { message?: string } };
+          logger.error(`Error ${response.status || 'desconocido'} al obtener likes:`, 
+                      response.data?.message || 'Error desconocido');
+        } else if ('request' in error) {
+          // La solicitud se realizó pero no se recibió respuesta
+          logger.error('No se recibió respuesta del servidor al obtener likes');
+        } else {
+          // Error al configurar la solicitud
+          logger.error('Error al configurar la solicitud de likes:', error.message);
+        }
+      } else {
+        logger.error('Error desconocido al obtener likes');
+      }
+      
+      // En caso de error, devolvemos un array vacío
+      return [];
+    }
   },
 
   /**
@@ -124,7 +161,7 @@ export const postService = {
   uploadImage: async (file: File): Promise<string> => {
     // Simulamos la carga de la imagen
     // En un entorno real, usaríamos el file para cargarlo a Firebase Storage
-    console.log(`Simulando subida de archivo: ${file.name} (${file.size} bytes)`); 
+    logger.log(`Simulando subida de archivo: ${file.name} (${file.size} bytes)`); 
     
     return new Promise((resolve) => {
       setTimeout(() => {

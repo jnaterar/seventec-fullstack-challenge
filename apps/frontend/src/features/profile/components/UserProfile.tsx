@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { logger } from '@frontend/shared/utils/logger';
 
 
 import {
@@ -19,8 +20,8 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { userService, type UserProfile } from '../services/userService';
-import { useAuth } from '@/shared/context/AuthContext';
-import { UserRole } from '@/config/api';
+import { useAuth } from '@frontend/shared/context/AuthContext';
+import { UserRole } from '@frontend/config/api';
 
 const ALLERGY_PLACEHOLDER = 'Introduce alergia y presiona +';
 
@@ -47,7 +48,7 @@ const UserProfile = () => {
         const data = await userService.getProfile();
         setProfile(data);
       } catch (err) {
-        console.error(err);
+        logger.error(err);
         setError('No se pudo cargar el perfil');
       } finally {
         setProfileLoading(false);
@@ -93,7 +94,7 @@ const UserProfile = () => {
       // Limpiar el mensaje de error si existía
       setError('');
     } catch (err: any) {
-      console.error(err);
+      logger.error(err);
       setError(err.message || 'Error al actualizar el perfil');
       // Limpiar mensaje de éxito si existía
       setSuccess('');

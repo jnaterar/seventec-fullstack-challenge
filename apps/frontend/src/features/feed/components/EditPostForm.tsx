@@ -9,9 +9,10 @@ import {
   Image as ImageIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { PostType, Post } from '../types/post.types';
-import { postService } from '../services/post.service';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { logger } from '@frontend/shared/utils/logger';
+import { PostType, Post } from '@frontend/features/feed/types/post.types';
+import { postService } from '@frontend/features/feed/services/post.service';
+import { useAuth } from '@frontend/shared/context/AuthContext';
 
 type EditPostFormProps = {
   post: Post;
@@ -84,7 +85,7 @@ export const EditPostForm: React.FC<EditPostFormProps> = ({
       onClose();
       
     } catch (error) {
-      console.error('Error al actualizar publicación:', error);
+      logger.error('Error al actualizar publicación:', error);
       setError('No se pudo actualizar la publicación');
     } finally {
       setIsSubmitting(false);

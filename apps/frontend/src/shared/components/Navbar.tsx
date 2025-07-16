@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { 
   AppBar, 
   Toolbar, 
@@ -12,39 +12,49 @@ import {
   Box,
   CircularProgress,
   Tooltip,
-  Divider
+  Divider,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
-import { useAuth } from '@/shared/context/AuthContext';
+import { Person as PersonIcon, ExitToApp as LogoutIcon, AdminPanelSettings as AdminIcon } from '@mui/icons-material';
+import { useAuth } from '@frontend/shared/context/AuthContext';
+import { logger } from '@frontend/shared/utils/logger';
 
 const Navbar: React.FC = () => {
-  const { currentUser, logout, loading } = useAuth();
+  const { currentUser, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const navigate = useNavigate();
 
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+  const handleToggleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    if (anchorEl) {
+      setAnchorEl(null); // Cerrar si ya estaba abierto
+    } else {
+      setAnchorEl(event.currentTarget); // Abrir si estaba cerrado
+    }
   };
 
-  const handleClose = () => {
+  const handleCloseMenu = () => {
     setAnchorEl(null);
   };
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      handleClose();
       await logout();
-      // La navegación se maneja en el AuthContext después de cerrar sesión
+      navigate('/login');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      logger.error('Error al cerrar sesión:', error);
     } finally {
       setIsLoggingOut(false);
+      handleCloseMenu();
     }
   };
 
   return (
-    <AppBar position="fixed">
-      <Toolbar>
+    <AppBar position="fixed" sx={{ height: '60px', justifyContent: 'center' }}>
+      <Toolbar sx={{ minHeight: '60px' }}>
+        {/* Logo del sitio web */}
         <Typography 
           variant="h6" 
           component={RouterLink} 
@@ -95,115 +105,132 @@ const Navbar: React.FC = () => {
           onvention App
         </Typography>
 
-        {currentUser ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Tooltip title="Cuenta">
-              <IconButton
-                size="large"
-                aria-label="account of current user"
-                aria-controls="menu-appbar"
-                aria-haspopup="true"
-                onClick={handleMenu}
+        {/* Botones de la cuenta */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {currentUser ? (
+            <>
+              {/* Avatar de la cuenta */}
+              <Tooltip title="Cuenta">
+                <IconButton
+                  size="large"
+                  aria-label="account of current user"
+                  aria-controls="menu-appbar"
+                  aria-haspopup="true"
+                  onClick={handleToggleMenu}
+                  color="inherit"
+                  sx={{ padding: 0 }}
+                >
+                  <Avatar 
+                    alt={currentUser.displayName || 'Usuario'}
+                    src={currentUser.photoURL || ''}
+                    sx={{ width: 36, height: 36 }}
+                  >
+                    {currentUser.displayName?.[0]?.toUpperCase() || 'U'}
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
+
+              {/* Menu de la cuenta */}
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                keepMounted
+                open={Boolean(anchorEl)}
+                onClose={handleCloseMenu}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
                 sx={{
-                  '&:hover': {
-                    backgroundColor: 'transparent',
-                    color: 'inherit'
+                  '& .MuiPaper-root': {
+                    transform: 'translateY(-8px) !important',
                   }
                 }}
-              >
-                <Box 
-                  className="logo-circle"
-                  component="span" 
-                  sx={{ 
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '5px',
-                    padding: '10px',
-                    bgcolor: '#5A2BE5',
-                    background: 'linear-gradient(135deg, #5A2BE5 0%, #8A2BE2 100%)',
-                    color: 'white',
-                    fontSize: '1rem',
-                    fontWeight: 700,
-                    transition: 'all 0.3s ease-in-out',
-                  }}
-                >                
-                  <Avatar 
-                    alt={currentUser.displayName || 'Usuario'} 
-                    src={currentUser.photoURL || ''}
-                    sx={{ width: 30, height: 30, mx: 0.5 }}
-                  />
-                </Box>              
-              </IconButton>
-            </Tooltip>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              open={Boolean(anchorEl)}
-              onClose={handleClose}
-              slotProps={{
-                list: {
-                  sx: {
-                    width: '250px',
-                    minWidth: '250px'
+                slotProps={{
+                  paper: {
+                    sx: {
+                      mt: 1.5,
+                      boxShadow: '0 6px 30px rgba(0,0,0,0.2)',
+                      minWidth: '200px',
+                      width: '200px',
+                      borderRadius: '8px 8px 8px 8px',
+                      overflow: 'visible',
+                      position: 'relative',
+                      right: 0
+                    }
                   }
-                }
-              }}
-            >
-              <MenuItem>{currentUser.displayName}</MenuItem>
-              <Divider/>
-              <MenuItem 
-                component={RouterLink} 
-                to="/profile"
-                onClick={handleClose}
+                }}                
               >
-                Mi Perfil
-              </MenuItem>
-              <MenuItem onClick={handleLogout} disabled={isLoggingOut}>
-                {isLoggingOut ? (
-                  <Box display="flex" alignItems="center" width="100%">
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    Cerrando sesión...
-                  </Box>
-                ) : 'Cerrar sesión'}
-              </MenuItem>
-            </Menu>
-          </Box>
-        ) : !loading && (
-          <Box>
-            <Button 
-              color="inherit" 
-              component={RouterLink} 
-              to="/login"
-              sx={{ mr: 1 }}
-            >
-              Iniciar sesión
-            </Button>
-            <Button 
-              variant="outlined" 
-              color="inherit" 
-              component={RouterLink} 
-              to="/signup"
-              sx={{ 
-                borderColor: 'white',
-                '&:hover': {
-                  borderColor: 'rgba(255, 255, 255, 0.8)'
-                }
-              }}
-            >
-              Registrarse
-            </Button>
-          </Box>
-        )}
+                <MenuItem disabled>
+                  <ListItemIcon>
+                    <PersonIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{currentUser?.displayName || 'Usuario'}</ListItemText>
+                </MenuItem>
+                <Divider/>
+                {currentUser?.roles?.includes('admin') && (
+                  <MenuItem onClick={() => {
+                    navigate('/admin');
+                    handleCloseMenu();
+                  }}>
+                    <ListItemIcon>
+                      <AdminIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Panel de Administración</ListItemText>
+                  </MenuItem>
+                )}
+                <MenuItem onClick={() => {
+                  navigate('/profile');
+                  handleCloseMenu();
+                }}>
+                  <ListItemIcon>
+                    <PersonIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>Mi Perfil</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleLogout} disabled={isLoggingOut}>
+                  <ListItemIcon>
+                    {isLoggingOut ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      <LogoutIcon fontSize="small" />
+                    )}
+                  </ListItemIcon>
+                  <ListItemText>
+                    {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}
+                  </ListItemText>
+                </MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <>
+              {/* Boton de iniciar sesion */}
+              <Button 
+                color="inherit" 
+                component={RouterLink} 
+                to="/login"
+                sx={{ textTransform: 'none' }}
+              >
+                Iniciar Sesión
+              </Button>
+
+              {/* Boton de registrarse */}
+              <Button 
+                variant="contained" 
+                color="secondary" 
+                component={RouterLink} 
+                to="/register"
+                sx={{ textTransform: 'none' }}
+              >
+                Registrarse
+              </Button>
+            </>
+          )}
+        </Box>
       </Toolbar>
     </AppBar>
   );

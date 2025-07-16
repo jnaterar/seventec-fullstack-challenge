@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/shared/context/AuthContext';
+import { logger } from '@frontend/shared/utils/logger';
+import { useAuth } from '@frontend/shared/context/AuthContext';
 import { 
   TextField, 
   Button, 
@@ -51,7 +52,7 @@ export const SignupForm: React.FC = () => {
       }, 2000);
     } catch (error) {
       setError('Error al crear la cuenta. Intenta de nuevo.');
-      console.error('Error al registrarse:', error);
+      logger.error('Error al registrarse:', error);
     } finally {
       setLoading(false);
     }

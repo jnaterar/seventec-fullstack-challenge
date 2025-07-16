@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/shared/context/AuthContext';
+import { logger } from '@frontend/shared/utils/logger';
+import { useAuth } from '@frontend/shared/context/AuthContext';
 import { 
   TextField, 
   Button, 
@@ -31,7 +32,7 @@ export const ForgotPassword: React.FC = () => {
       setMessage('Revisa tu bandeja de entrada para continuar con el restablecimiento de contraseña');
     } catch (error) {
       setError('Error al enviar el correo de restablecimiento');
-      console.error('Error al restablecer contraseña:', error);
+      logger.error('Error al restablecer contraseña:', error);
     } finally {
       setLoading(false);
     }

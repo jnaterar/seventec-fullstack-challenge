@@ -1,6 +1,7 @@
 import { initializeApp, FirebaseApp, getApps } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirebaseConfig } from './firebase-config';
+import { getFirebaseConfig } from '@frontend/config/firebase-config';
+import { logger } from '@frontend/shared/utils/logger';
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
@@ -39,7 +40,7 @@ export const initializeFirebase = async (): Promise<{ app: FirebaseApp; auth: Au
     // Esperar a que se complete la inicialización
     return await initializationPromise;
   } catch (error) {
-    console.error('Error al inicializar Firebase:', error);
+    logger.error('Error al inicializar Firebase:', error);
     initializationPromise = null;
     throw new Error('No se pudo inicializar Firebase. Por favor, verifica la configuración.');
   }
@@ -62,5 +63,5 @@ export const getFirebaseAuth = (): Auth => {
 
 // Inicializar Firebase automáticamente al cargar el módulo
 initializeFirebase().catch(error => {
-  console.error('Error al inicializar Firebase:', error);
+  logger.error('Error al inicializar Firebase:', error);
 });

@@ -1,15 +1,16 @@
-import { Container, Typography, Box, CircularProgress } from '@mui/material';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { ProtectedRoute, PublicRoute } from '@/shared/components/ProtectedRoute';
-import { useAuth } from '@/shared/context/AuthContext';
-import Navbar from '@/shared/components/Navbar';
-import { LoginForm } from '@/features/auth/components/LoginForm';
-import { SignupForm } from '@/features/auth/components/SignupForm';
-import { ForgotPassword } from '@/features/auth/components/ForgotPassword';
-import UserProfile from '@/features/profile/components/UserProfile';
-import { Feed } from '@/features/feed';
 import { useEffect } from 'react';
-import { NotificationService } from '@/services/notifications.service';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Container, Typography, Box, CircularProgress } from '@mui/material';
+import { ProtectedRoute, PublicRoute } from '@frontend/shared/components/ProtectedRoute';
+import { useAuth } from '@frontend/shared/context/AuthContext';
+import Navbar from '@frontend/shared/components/Navbar';
+import { logger } from '@frontend/shared/utils/logger';
+import { LoginForm } from '@frontend/features/auth/components/LoginForm';
+import { SignupForm } from '@frontend/features/auth/components/SignupForm';
+import { ForgotPassword } from '@frontend/features/auth/components/ForgotPassword';
+import UserProfile from '@frontend/features/profile/components/UserProfile';
+import { Feed } from '@frontend/features/feed';
+import { NotificationService } from '@frontend/services/notifications.service';
 
 // Componente para mostrar mientras se verifica la autenticación
 const AuthCheck = ({ children }: { children: React.ReactNode }) => {
@@ -27,37 +28,48 @@ const AuthCheck = ({ children }: { children: React.ReactNode }) => {
 };
 
 export function App() {
-  const location = useLocation();
   const { currentUser } = useAuth();
 
-  // Verificar autenticación en cada cambio de ruta
+  // Efecto para inicialización única
   useEffect(() => {
-    // Aquí podrías verificar el token con el servidor si es necesario
-  }, [location.pathname]);
-  
-  // Inicializar el servicio de notificaciones cuando el usuario esté autenticado
-  useEffect(() => {
-    if (currentUser) {
-      console.log('Inicializando servicio de notificaciones para el usuario:', currentUser.email);
-      // Inicializar el servicio de notificaciones y solicitar permisos
-      const notificationService = NotificationService.getInstance();
-      notificationService.requestPermissionAndRegisterToken()
-        .then(success => {
+    let isMounted = true;
+    
+    const initializeApp = async () => {
+      if (!currentUser) return;
+      
+      logger.log('Inicializando servicio de notificaciones para el usuario:', currentUser.email);
+      
+      try {
+        const notificationService = NotificationService.getInstance();
+        const success = await notificationService.requestPermissionAndRegisterToken();
+        
+        if (isMounted) {
           if (success) {
-            console.log('Token FCM registrado exitosamente');
+            logger.log('Token FCM registrado exitosamente');
           } else {
-            console.warn('No se pudo registrar el token FCM');
+            logger.warn('No se pudo registrar el token FCM');
           }
-        })
-        .catch(error => console.error('Error al registrar token FCM:', error));
-    }
-  }, [currentUser]);
+        }
+      } catch (error) {
+        logger.error('Error al registrar token FCM:', error);
+      }
+    };
+    
+    initializeApp();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.email]); // Solo dependemos del email del usuario
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AuthCheck>
+        {/* Navbar */}
         <Navbar />
-        <Box component="main" sx={{ flexGrow: 1, py: 4, px: { xs: 2, sm: 3 }, mt: '64px' }}>
+        
+        {/* Contenido principal */}
+        <Box component="main" sx={{ flexGrow: 1, py: 3, px: { xs: 2, sm: 3 }, mt: '64px' }}>
           <Container maxWidth="lg">
             <Routes>
               {/* Rutas públicas - solo accesibles para usuarios no autenticados */}

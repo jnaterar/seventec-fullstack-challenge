@@ -14,7 +14,7 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "../../shared/**/*.ts"
+    "../../libs/shared/**/*.ts"
   ],
   "exclude": [
     "**/*.spec.ts",

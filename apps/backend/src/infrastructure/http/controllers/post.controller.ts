@@ -72,13 +72,15 @@ export class PostController {
    * Obtener lista de posts con paginación
    */
   public getPosts = async (req: Request): Promise<{ status: number; data: any }> => {
-    // Extraemos limit y offset fuera del try/catch para poder usarlos en ambos bloques
-    const { limit = 10, offset = 0 } = req.query;
-    const limitNum = Number(limit);
-    const offsetNum = Number(offset);
+    // Extraer valores fuera del try/catch para poder usarlos en ambos bloques
+    const { limit = '10', offset = '0', userId } = req.query;
+    const limitNum = Math.min(parseInt(limit as string, 10) || 10, 50); // Máximo 50 por página
+    const offsetNum = parseInt(offset as string, 10) || 0;
+    const currentUserId = userId as string;
     
     try {
-      const posts = await this.getPostsUseCase.execute(limitNum, offsetNum);
+      // Obtener los posts
+      const posts = await this.getPostsUseCase.execute(limitNum, offsetNum, currentUserId);
       
       // Incluso si el array está vacío, devolvemos 200 OK
       return { 
@@ -198,17 +200,91 @@ export class PostController {
 
   /**
    * Dar o quitar like a un post
+   * Devuelve la lista completa de usuarios que dieron like al post
    */
   public toggleLike = async (req: Request): Promise<{ status: number; data: any }> => {
     try {
       const { postId } = req.params;
       const { userId } = req.body;
-      const likes = await this.toggleLikeUseCase.execute(postId, userId);
+      
+      // Ejecutar el toggle like
+      await this.toggleLikeUseCase.execute(postId, userId);
+      
+      // Obtener la lista actualizada de likes
+      const likesList = await this.likeAdapter.findByPostId(postId);
+      
+      // Convertir la lista de likes a lista de usuarios con nombre
+      const usersWhoLiked = [];
+      
+      for (const like of likesList) {
+        try {
+          const user = await this.userAdapter.findById(like.userId);
+          if (user) {
+            usersWhoLiked.push({
+              id: user.id,
+              nombre: user.nombre || 'Usuario'
+            });
+          }
+        } catch (error) {
+          console.error(`Error al obtener información del usuario ${like.userId}:`, error);
+          usersWhoLiked.push({
+            id: like.userId,
+            nombre: 'Usuario'
+          });
+        }
+      }
 
-      return { status: 200, data: { likes } };
+      return { status: 200, data: { likes: usersWhoLiked } };
 
     } catch (error) {
+      console.error('Error en toggleLike:', error);
       return { status: 500, data: { message: 'Error al actualizar el like', error: error instanceof Error ? error.message : 'Error desconocido' } };
+    }
+  }
+
+  /**
+   * Obtener lista de usuarios que dieron like a un post
+   */
+  public getPostLikes = async (req: Request): Promise<{ status: number; data: any }> => {
+    try {
+      const { postId } = req.params;
+      
+      // Obtenemos los likes del post
+      const likesList = await this.likeAdapter.findByPostId(postId);
+      
+      // Para cada like, obtenemos información del usuario
+      const usersWhoLiked = [];
+      
+      for (const like of likesList) {
+        try {
+          const user = await this.userAdapter.findById(like.userId);
+          if (user) {
+            usersWhoLiked.push({
+              id: user.id,
+              nombre: user.nombre || 'Usuario'
+            });
+          }
+        } catch (error) {
+          console.error(`Error al obtener información del usuario ${like.userId}:`, error);
+          // Aún si falla, agregamos el ID de usuario sin nombre
+          usersWhoLiked.push({
+            id: like.userId,
+            nombre: 'Usuario'
+          });
+        }
+      }
+
+      return { status: 200, data: usersWhoLiked };
+
+    } catch (error) {
+      console.error('Error al obtener likes del post:', error);
+      return { 
+        status: 500, 
+        data: { 
+          message: 'Error al obtener likes del post',
+          error: error instanceof Error ? error.message : 'Error desconocido'
+        } 
+      };
     }
   }
 }

@@ -2,6 +2,7 @@ import { PostPort } from '@backend/core/application/ports/post.port';
 import { CommentPort } from '@backend/core/application/ports/post.port';
 import { LikePort } from '@backend/core/application/ports/post.port';
 import { Comment } from '@backend/core/domain/entities/comment.entity';
+import { Like } from '@backend/core/domain/entities/like.entity';
 import { UserPort } from '@backend/core/application/ports/user.port';
 
 export class GetPostsUseCase {
@@ -12,7 +13,7 @@ export class GetPostsUseCase {
     private readonly userPort: UserPort
   ) {}
 
-  async execute(limit: number, offset: number): Promise<Array<{
+  async execute(limit: number, offset: number, currentUserId?: string): Promise<Array<{
     id: string;
     imagen: string;
     descripcion: string;
@@ -20,7 +21,8 @@ export class GetPostsUseCase {
     fechaEdicion: Date;
     userId: string;
     comments: Comment[];
-    likes: number;
+    likes: {id: string, nombre: string}[];
+    userHasLiked: boolean;
   }>> {
     try {
       const posts = await this.postPort.findAll(limit, offset);
@@ -38,9 +40,39 @@ export class GetPostsUseCase {
             console.error(`Error al obtener comentarios para el post ${post.id}:`, error);
           }
           
-          let likes = 0;
+          // Inicializamos los likes como un array vacío y userHasLiked como false
+          let likes: {id: string, nombre: string}[] = [];
+          let userHasLiked = false;
+          let likesList: Like[] = [];
+          
           try {
-            likes = await this.likePort.countByPostId(post.id);
+            // Obtenemos la lista completa de likes
+            likesList = await this.likePort.findByPostId(post.id);
+            
+            // Para cada like, obtenemos información del usuario
+            for (const like of likesList) {
+              // Verificar si el usuario actual ha dado like
+              if (currentUserId && like.userId === currentUserId) {
+                userHasLiked = true;
+              }
+              
+              try {
+                const likeUser = await this.userPort.findById(like.userId);
+                if (likeUser) {
+                  likes.push({
+                    id: like.userId,
+                    nombre: likeUser.nombre || 'Usuario'
+                  });
+                }
+              } catch (likeUserError) {
+                console.error(`Error al obtener información de usuario para like ${like.id}:`, likeUserError);
+                // Aún si falla, agregamos el ID de usuario sin nombre
+                likes.push({
+                  id: like.userId,
+                  nombre: 'Usuario'
+                });
+              }
+            }
           } catch (error) {
             console.error(`Error al obtener likes para el post ${post.id}:`, error);
           }
@@ -107,6 +139,7 @@ export class GetPostsUseCase {
             userId: post.userId || '',
             comments,
             likes,
+            userHasLiked: userHasLiked,
             autor: author ? {
               id: author.id,
               nombre: author.nombre || 'Usuario',

@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { 
-  Box, Card, CardContent, TextField, Button, CircularProgress, 
-  Typography, IconButton, FormControl, InputLabel, MenuItem, 
-  Select, FormHelperText, Avatar, Snackbar, Alert
+  Box, Card, CardContent, TextField, Button, CircularProgress, Typography, IconButton, 
+  FormControl, InputLabel, MenuItem, Select, FormHelperText, Avatar, Snackbar, Alert
 } from '@mui/material';
-import {
-  Image as ImageIcon,
-  Close as CloseIcon,
-  Notifications as NotificationsIcon
-} from '@mui/icons-material';
-import { PostType, CreatePostDto } from '../types/post.types';
-import { postService } from '../services/post.service';
-import { useAuth } from '../../../shared/context/AuthContext';
-import { UserRole } from '@shared/enums/user-role.enum';
+import { Image as ImageIcon, Close as CloseIcon, Notifications as NotificationsIcon } from '@mui/icons-material';
+import { PostType, CreatePostDto } from '@frontend/features/feed/types/post.types';
+import { postService } from '@frontend/features/feed/services/post.service';
+import { useAuth } from '@frontend/shared/context/AuthContext';
+import { UserRole } from '@enums';
+import { logger } from '@frontend/shared/utils/logger';
 
 type NewPostFormProps = {
   onPostCreated: () => void;
@@ -97,7 +93,7 @@ export const NewPostForm: React.FC<NewPostFormProps> = ({ onPostCreated, isVisib
       }, 1500);
       
     } catch (error) {
-      console.error('Error al crear publicación:', error);
+      logger.error('Error al crear publicación:', error);
       setError('No se pudo crear la publicación');
       setNotification({
         message: 'Error al crear la publicación. Inténtalo de nuevo.',

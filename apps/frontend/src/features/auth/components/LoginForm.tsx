@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/shared/context/AuthContext';
+import { logger } from '@frontend/shared/utils/logger';
+import { useAuth } from '@frontend/shared/context/AuthContext';
 import { 
   TextField, 
   Button, 
@@ -28,7 +29,7 @@ export const LoginForm: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'No se pudo iniciar sesión. Verifica tus credenciales.';
       setFormError(errorMessage);
-      console.error('Error al iniciar sesión:', error);
+      logger.error('Error al iniciar sesión:', error);
     }
   };
 

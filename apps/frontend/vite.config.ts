@@ -14,12 +14,16 @@ export default defineConfig({
         replacement: resolve(__dirname, 'src')
       },
       {
+        find: '@frontend',
+        replacement: resolve(__dirname, 'src')
+      },
+      {
         find: '@backend',
         replacement: resolve(__dirname, '../../backend/src')
       },
       {
-        find: '@shared',
-        replacement: resolve(__dirname, '../../shared')
+        find: '@enums',
+        replacement: resolve(__dirname, '../../libs/shared/enums/src')
       }
     ],
     preserveSymlinks: true

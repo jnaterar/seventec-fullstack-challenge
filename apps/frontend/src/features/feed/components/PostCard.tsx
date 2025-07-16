@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, CardHeader, CardContent, CardActions, CardMedia,
-  Typography, Avatar, IconButton, Box, TextField,
-  Chip, Tooltip, Divider, Menu, MenuItem, CircularProgress,
-  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button,
-  Snackbar, Alert
+  Card, CardHeader, CardContent, CardActions, CardMedia, Typography, Avatar, IconButton, Box, TextField,
+  Chip, Tooltip, Divider, Menu, MenuItem, CircularProgress, Button, Dialog, DialogTitle, DialogContent, 
+  DialogContentText, DialogActions, Snackbar, Alert, List, ListItem, ListItemAvatar, ListItemText, Grid
 } from '@mui/material';
 import {
   Favorite as FavoriteIcon,
@@ -13,13 +11,16 @@ import {
   MoreVert as MoreVertIcon,
   Send as SendIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Close as CloseIcon,
+  People as PeopleIcon
 } from '@mui/icons-material';
-import { Post, CreateCommentDto } from '../types/post.types';
-import { postService } from '../services/post.service';
-import { useAuth } from '../../../shared/context/AuthContext';
-import { EditPostForm } from './EditPostForm';
-import { UserRole } from '@shared/enums/user-role.enum';
+import { Post, CreateCommentDto } from '@frontend/features/feed/types/post.types';
+import { postService } from '@frontend/features/feed/services/post.service';
+import { useAuth } from '@frontend/shared/context/AuthContext';
+import { EditPostForm } from '@frontend/features/feed/components/EditPostForm';
+import { UserRole } from '@enums';
+import { logger } from '@frontend/shared/utils/logger';
 
 type PostCardProps = {
   post: Post;
@@ -36,9 +37,20 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
+  const [likesModalOpen, setLikesModalOpen] = useState(false);
+  const [likesList, setLikesList] = useState<{id: string; nombre: string}[]>([]);
+  const [likesLoading, setLikesLoading] = useState(false);
 
   // Fecha formateada para el tooltip
   const [formattedDate, setFormattedDate] = useState<string>('Fecha no disponible');
+  // Determinar si el usuario loggeado ha dado like
+  // Efecto para mantener sincronizado el estado con los datos del post
+  useEffect(() => {
+    // Actualizar el estado local basado en la propiedad userHasLiked del post
+    setHasLiked(post.userHasLiked || false);
+    // Actualizar el contador de likes basado en el array de likes
+    setLikesCount(Array.isArray(post.likes) ? post.likes.length : 0);
+  }, [post.userHasLiked, post.likes]);
   
   useEffect(() => {    
     // Esta función maneja todos los posibles formatos de fecha
@@ -90,7 +102,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
         setFormattedDate(formatted);
         
       } catch (error) {
-        console.error('Error formateando fecha:', error);
+        logger.error('Error formateando fecha:', error);
         setFormattedDate('Fecha no disponible');
       }
     };
@@ -98,7 +110,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
     formatPostDate();
   }, [post]);  // Recalcula cuando el post cambia
   
-  const [likesCount, setLikesCount] = useState(post.likes || 0);
+  const [likesCount, setLikesCount] = useState(Array.isArray(post.likes) ? post.likes.length : 0);
   const [hasLiked, setHasLiked] = useState(post.userHasLiked || false);
   const [likeLoading, setLikeLoading] = useState(false);
 
@@ -148,7 +160,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
       // El componente padre ya tiene un retraso integrado para la eliminación visual
       onDeletePost(post.id);
     } catch (error) {
-      console.error('Error al eliminar la publicación:', error);
+      logger.error('Error al eliminar la publicación:', error);
       setNotification({
         message: 'Error al eliminar la publicación',
         type: 'error'
@@ -172,31 +184,42 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
   // Manejo de likes
   const handleLikeToggle = async () => {
     if (likeLoading || !currentUser) return;
-
     setLikeLoading(true);
     try {
-      // Usar toggleLike en lugar de likePost/unlikePost
-      const result = await postService.toggleLike(post.id, currentUser.uid);
-      
-      // Actualizar estado local basado en el nuevo estado
+      // Llamamos al servicio para actualizar el like en el backend
+      await postService.toggleLike(post.id, currentUser.uid);
       const newLikedState = !hasLiked;
       setHasLiked(newLikedState);
       
-      // Si tenemos los likes actualizados desde el servidor, usamos ese valor
-      if (result && typeof result.likes === 'number') {
-        setLikesCount(result.likes);
+      // Actualizamos los likes localmente mientras se actualiza el backend
+      let updatedLikes = [...(Array.isArray(post.likes) ? post.likes : [])];
+      
+      if (newLikedState) {
+        // Agregar el usuario actual a la lista de likes si no existe
+        if (!updatedLikes.some(like => like.id === currentUser.uid)) {
+          updatedLikes.push({
+            id: currentUser.uid,
+            nombre: currentUser.displayName || 'Usuario'
+          });
+        }
       } else {
-        // Si no, calculamos localmente
-        setLikesCount(prev => newLikedState ? prev + 1 : Math.max(0, prev - 1));
+        // Remover el usuario actual de la lista de likes
+        updatedLikes = updatedLikes.filter(like => like.id !== currentUser.uid);
       }
-      // Actualizar el post en el estado del padre
+      
+      // Actualizar contador local
+      setLikesCount(updatedLikes.length);
+      
+      // Actualizar el post en el padre
       onUpdatePost({
         ...post,
-        likes: result?.likes || (newLikedState ? likesCount : Math.max(0, likesCount)),
+        likes: updatedLikes,
         userHasLiked: newLikedState
       });
     } catch (error) {
-      console.error('Error al gestionar like:', error);
+      logger.error('Error al gestionar like:', error);
+      // Restaurar estado anterior en caso de error
+      setHasLiked(!hasLiked);
     } finally {
       setLikeLoading(false);
     }
@@ -205,6 +228,43 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
   // Manejo de comentarios
   const handleCommentToggle = () => {
     setShowComments(!showComments);
+  };
+  
+  // Declaración de estados locales para contador de comentarios
+  const [commentsCount, setCommentsCount] = useState(Array.isArray(post.comentarios) ? post.comentarios.length : 0);
+
+  // Efecto para actualizar el contador de comentarios cuando cambia el post
+  useEffect(() => {
+    setCommentsCount(Array.isArray(post.comentarios) ? post.comentarios.length : 0);
+  }, [post.comentarios]);
+
+  // Calcular número de comentarios
+  // const commentsCount = post.comentarios?.length || 0;
+  
+  // Función para abrir modal de likes
+  const handleOpenLikesModal = async () => {
+    if (!Array.isArray(post.likes) || post.likes.length === 0) return; // No abrir si no hay likes
+    
+    setLikesLoading(true);
+    setLikesModalOpen(true);
+    
+    try {
+      // Ahora usamos directamente el array de likes que viene con el post
+      setLikesList(post.likes);
+    } catch (error) {
+      logger.error('Error al cargar lista de likes:', error);
+      setNotification({
+        message: 'No se pudo cargar la lista de usuarios',
+        type: 'error'
+      });
+    } finally {
+      setLikesLoading(false);
+    }
+  };
+  
+  // Función para cerrar modal de likes
+  const handleCloseLikesModal = () => {
+    setLikesModalOpen(false);
   };
 
   const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,7 +302,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
         type: 'success'
       });
     } catch (error) {
-      console.error('Error al enviar comentario:', error);
+      logger.error('Error al enviar comentario:', error);
       // Notificación de error
       setNotification({
         message: 'No se pudo publicar el comentario. Intente nuevamente.',
@@ -254,8 +314,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
   };
 
   return (
-    <Card elevation={3} sx={{ borderRadius: 4 }}>
-      <CardHeader
+    <Card elevation={3} sx={{ borderRadius: 2 }}>
+      <CardHeader sx={{ paddingBottom: 0 }}
         avatar={
           <Avatar sx={{ bgcolor: 'primary.main' }}>
             {authorInitial}
@@ -296,6 +356,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
           </Tooltip>
         }
       />
+
+      {/* Contenido del post */}
+      <CardContent sx={{ paddingY: 1.5 }}>
+        <Typography variant="body1">
+          {post.descripcion}
+        </Typography>
+      </CardContent>      
+
+      <Divider />
     
       {/* Imagen de la publicación */}
       <CardMedia
@@ -304,50 +373,102 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
         image={post.imagen}
         alt={post.descripcion.substring(0, 20)}
       />
-      
-      {/* Contenido del post */}
-      <CardContent>
-        <Typography variant="body1">
-          {post.descripcion}
-        </Typography>
-      </CardContent>
+
+      <Divider />
+
+      {/* Contadores de likes y comentarios */}
+      <Grid container sx={{ paddingX: 2, paddingY: 1 }}>
+        <Grid size={{ xs: 6 }}>
+          {likesCount > 0 && (
+            <Tooltip title={hasLiked ? "A ti y a otras personas les gusta esto" : "Personas que les gusta esto"}>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  '&:hover': { color: 'error.main' } 
+                }} 
+                onClick={handleOpenLikesModal}
+              >
+                <FavoriteIcon color="error" fontSize="small" sx={{ mr: 0.5, fontSize: '1rem' }} />
+                {likesCount} {likesCount === 1 ? 'persona' : 'personas'}
+              </Typography>
+            </Tooltip>
+          )}          
+        </Grid>
+        <Grid size={{ xs: 6 }} display="flex" justifyContent="flex-end">
+          <Tooltip title={showComments ? "Ocultar comentarios" : "Ver comentarios"}>
+            <Typography 
+              variant="body2" 
+              color={showComments ? "primary.main" : "text.secondary"}
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                cursor: 'pointer',
+                '&:hover': { color: 'primary.main' } 
+              }} 
+              onClick={() => setShowComments(!showComments)}
+            >
+              <CommentIcon 
+                fontSize="small" 
+                sx={{ 
+                  mr: 0.5, 
+                  fontSize: '1rem',
+                  color: showComments ? 'primary.main' : 'inherit'
+                }} 
+              />
+              {commentsCount} {commentsCount === 1 ? 'comentario' : 'comentarios'}
+            </Typography>
+          </Tooltip>          
+        </Grid>
+      </Grid>    
       
       {/* Acciones (like, comentar) */}
       <CardActions sx={{ p: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-around', width: '100%', borderTop: '1px solid #ccc', mx: 1.5 }}>
           <IconButton 
-            aria-label="like" 
+            aria-label="Me gusta"
             onClick={handleLikeToggle}
             disabled={likeLoading || !currentUser}
-            sx={{ 
-              width: '40%',
-              borderRadius: 1,
-              my: 1,
-              '&:hover': {
-                backgroundColor: 'action.hover', // Color de fondo al hacer hover
-                '& .MuiTypography-root': {  // Esto selecciona el Typography hijo
-                  color: 'primary.main'
-                }
-              }
-            }}          
+            sx={{
+              color: hasLiked ? 'error.main' : 'default',
+              '&:hover': { color: hasLiked ? 'error.main' : 'error.light' }
+            }}
           >
-            {likeLoading ? (
-              <CircularProgress size={20} />
-            ) : hasLiked ? (
+            {hasLiked ? (
               <FavoriteIcon color="error" />
             ) : (
               <FavoriteBorderIcon />
             )}
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              sx={{
-                ml: 0.5,
-                transition: 'color 0.2s ease-in-out'
-              }} 
-            >            
-              Me gusta
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', ml: 0.5 }}>
+              <Typography 
+                variant="body2" 
+                color={hasLiked ? "error.main" : "text.secondary"}
+                sx={{
+                  transition: 'color 0.2s ease-in-out',
+                  fontWeight: hasLiked ? 500 : 400
+                }} 
+              >            
+                Me gusta
+              </Typography>
+              {likesCount > 0 && (
+                <Chip 
+                  size="small"
+                  label={likesCount}
+                  color={hasLiked ? "error" : "default"}
+                  variant={hasLiked ? "filled" : "outlined"}
+                  sx={{ 
+                    height: 18, 
+                    fontSize: '0.7rem', 
+                    ml: 1,
+                    fontWeight: 'bold',
+                    minWidth: 28
+                  }}
+                />
+              )}
+            </Box>
           </IconButton>
 
           <IconButton 
@@ -365,17 +486,33 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
               }
             }}            
           >
-            <CommentIcon /> 
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              sx={{
-                ml: 0.5,
-                transition: 'color 0.2s ease-in-out'
-              }} 
-            >
-              Comentar
-            </Typography>
+            <CommentIcon color={showComments ? "primary" : "inherit"} /> 
+            <Box sx={{ display: 'flex', alignItems: 'center', ml: 0.5 }}>
+              <Typography 
+                variant="body2" 
+                color={showComments ? "primary" : "text.secondary"} 
+                sx={{
+                  transition: 'color 0.2s ease-in-out'
+                }} 
+              >
+                Comentar
+              </Typography>
+              {commentsCount > 0 && (
+                <Chip 
+                  size="small"
+                  label={commentsCount}
+                  color={showComments ? "primary" : "default"}
+                  variant={showComments ? "filled" : "outlined"}
+                  sx={{ 
+                    height: 18, 
+                    fontSize: '0.7rem', 
+                    ml: 1,
+                    fontWeight: 'bold',
+                    minWidth: 28
+                  }}
+                />
+              )}
+            </Box>
           </IconButton>
         </Box>
       </CardActions>
@@ -385,16 +522,23 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
         <Box sx={{ px: 2, pb: 2 }}>
           <Divider sx={{ mb: 2 }} />
           
+          {/* Encabezado de comentarios */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 'bold' }}>
+              Comentarios ({commentsCount})
+            </Typography>
+          </Box>
+          
           {/* Comentarios existentes */}
           <Box sx={{ mb: 2 }}>
             {post.comentarios && post.comentarios.length > 0 ? (
               post.comentarios.map((comment) => (
-                <Box key={comment.id} sx={{ mb: 1.5 }}>
+                <Box key={comment.id} sx={{ mb: 1.5, pb: 1.5, borderBottom: '1px solid #f0f0f0' }}>
                   <Box display="flex" gap={1}>
-                    <Avatar sx={{ width: 30, height: 30 }}>
+                    <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.light' }}>
                       {comment.autor?.nombre?.charAt(0).toUpperCase() || 'U'}
                     </Avatar>
-                    <Box>
+                    <Box sx={{ flexGrow: 1 }}>
                       <Box display="flex" alignItems="center" gap={1}>
                         <Typography variant="subtitle2" fontWeight={500}>
                           {comment.autor?.nombre || 'Usuario'}
@@ -409,26 +553,31 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
                             sx={{ height: 16, fontSize: '0.6rem' }}
                           />
                         ))}
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                          {comment.fechaRelativa}
+                        </Typography>
                       </Box>
-                      <Typography variant="body2">{comment.contenido}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {comment.fechaRelativa}
+                      <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {comment.contenido}
                       </Typography>
                     </Box>
                   </Box>
                 </Box>
               ))
             ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                No hay comentarios aún. ¡Sé el primero en comentar!
-              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
+                <CommentIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  No hay comentarios aún. ¡Sé el primero en comentar!
+                </Typography>
+              </Box>
             )}
           </Box>
           
           {/* Formulario para nuevo comentario */}
           {currentUser && (
-            <Box display="flex" gap={1} alignItems="flex-start">
-              <Avatar sx={{ width: 35, height: 35 }}>
+            <Box display="flex" gap={1} alignItems="flex-start" sx={{ mt: 2 }}>
+              <Avatar sx={{ width: 35, height: 35, bgcolor: 'primary.main' }}>
                 {currentUser.displayName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase() || 'U'}
               </Avatar>
               <Box flexGrow={1}>
@@ -445,7 +594,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
                       handleSubmitComment();
                     }
                   }}
-                  helperText="Presiona Enter para enviar tu comentario o haz clic en el botón"
+                  helperText={submittingComment ? "Enviando comentario..." : "Presiona Enter para enviar tu comentario"}
+                  FormHelperTextProps={{
+                    sx: { fontStyle: 'italic', fontSize: '0.7rem' }
+                  }}
                   InputProps={{
                     endAdornment: (
                       <IconButton 
@@ -453,11 +605,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
                         onClick={handleSubmitComment}
                         disabled={submittingComment || !newComment.trim()}
                         title="Enviar comentario"
+                        color="primary"
                       >
                         {submittingComment ? <CircularProgress size={20} /> : <SendIcon />}
                       </IconButton>
                     ),
                   }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '20px' } }}
                 />
               </Box>
             </Box>
@@ -471,11 +625,54 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleCloseMenu}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        disablePortal
+        sx={{
+          zIndex: (theme) => theme.zIndex.tooltip + 50,
+          '& .MuiPaper-root': {
+            transform: 'translateX(-20px) !important'
+          }
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1.5,
+              boxShadow: '0 6px 30px rgba(0,0,0,0.2)',
+              minWidth: '200px',
+              width: '200px',
+              borderRadius: '8px 0 8px 8px',
+              overflow: 'visible',
+              position: 'relative',
+              right: 0,
+              '&::before': {
+                content: '""',
+                display: 'block',
+                position: 'absolute',
+                top: -8,
+                right: 0,
+                width: '16px',
+                height: '16px',
+                backgroundColor: '#ffffff',
+                clipPath: 'polygon(0% 100%, 100% 100%, 100% 0%)',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                zIndex: 1
+              }
+            }
+          }
+        }}
       >
         <MenuItem onClick={handleEditPost}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Editar
         </MenuItem>
+        <Divider sx={{ my: 0 }} />
         <MenuItem onClick={handleOpenConfirmDialog}>
           <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
           Eliminar
@@ -516,6 +713,52 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdatePost, onDelete
       />
       
       {/* Notificación de éxito/error */}
+      {/* Modal para mostrar usuarios que dieron like */}
+      <Dialog
+        open={likesModalOpen}
+        onClose={handleCloseLikesModal}
+        aria-labelledby="likes-dialog-title"
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle id="likes-dialog-title" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FavoriteIcon color="error" />
+            <Typography variant="h6">Personas que les gusta</Typography>
+          </Box>
+          <IconButton edge="end" color="inherit" onClick={handleCloseLikesModal} aria-label="cerrar">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {likesLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : likesList.length > 0 ? (
+            <List sx={{ pt: 0 }}>
+              {likesList.map((user) => (
+                <ListItem key={user.id}>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      {user.nombre.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary={user.nombre} />
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
+              <PeopleIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 1 }} />
+              <Typography variant="body1" color="text.secondary">
+                No se pudieron cargar los datos
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+      
       <Snackbar 
         open={notification !== null} 
         autoHideDuration={5000} 

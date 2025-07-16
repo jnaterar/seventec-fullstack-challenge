@@ -2,6 +2,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { onMessage } from 'firebase/messaging';
 import { userService } from '../features/profile/services/userService';
 import { initializeFirebase } from '../config/firebase-config';
+import { logger } from '@frontend/shared/utils/logger';
 
 // Variable para almacenar si ya se solicitaron permisos
 let permissionsRequested = false;
@@ -18,7 +19,7 @@ export class NotificationService {
       // Inicializar Firebase Messaging una vez que la app esté lista
       this.initMessaging();
     } catch (error) {
-      console.error('Error al inicializar el servicio de notificaciones:', error);
+      logger.error('Error al inicializar el servicio de notificaciones:', error);
     }
   }
 
@@ -39,7 +40,7 @@ export class NotificationService {
     try {
       // Verificar que estamos en un navegador con soporte para Service Workers
       if (!('serviceWorker' in navigator)) {
-        console.warn('Este navegador no soporta Service Workers, las notificaciones no funcionarán');
+        logger.warn('Este navegador no soporta Service Workers, las notificaciones no funcionarán');
         return;
       }
 
@@ -59,9 +60,9 @@ export class NotificationService {
         }
       });
 
-      console.log('Servicio de notificaciones inicializado correctamente');
+      logger.log('Servicio de notificaciones inicializado correctamente');
     } catch (error) {
-      console.error('Error al inicializar Firebase Messaging:', error);
+      logger.error('Error al inicializar Firebase Messaging:', error);
     }
   }
 
@@ -71,7 +72,7 @@ export class NotificationService {
   public async requestPermissionAndRegisterToken(): Promise<boolean> {
     // Evitar solicitar permisos múltiples veces en la misma sesión
     if (permissionsRequested) {
-      console.log('Ya se solicitaron permisos de notificación en esta sesión');
+      logger.log('Ya se solicitaron permisos de notificación en esta sesión');
       return true;
     }
     permissionsRequested = true;
@@ -85,26 +86,26 @@ export class NotificationService {
       }
 
       // Solicitar permiso para mostrar notificaciones
-      console.log('Solicitando permiso para notificaciones...');
+      logger.log('Solicitando permiso para notificaciones...');
       
       const { getToken } = await import('firebase/messaging');
       const permission = await Notification.requestPermission();
       
       if (permission !== 'granted') {
-        console.warn('Permiso para notificaciones denegado');
+        logger.warn('Permiso para notificaciones denegado');
         return false;
       }
 
-      console.log('Permiso para notificaciones concedido');
+      logger.log('Permiso para notificaciones concedido');
 
       // Registrar el service worker si no está registrado
       try {
         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
           scope: '/'
         });
-        console.log('Service Worker registrado correctamente:', registration);
+        logger.log('Service Worker registrado correctamente:', registration);
       } catch (e) {
-        console.error('Error al registrar el Service Worker:', e);
+        logger.error('Error al registrar el Service Worker:', e);
         return false;
       }
 
@@ -114,16 +115,16 @@ export class NotificationService {
       });
 
       if (token) {
-        console.log('Token FCM obtenido:', token);
+        logger.log('Token FCM obtenido:', token);
         // Enviar el token al servidor
         await this.saveTokenToServer(token);
         return true;
       } else {
-        console.warn('No se pudo obtener un token FCM');
+        logger.warn('No se pudo obtener un token FCM');
         return false;
       }
     } catch (error) {
-      console.error('Error al solicitar permiso o registrar token:', error);
+      logger.error('Error al solicitar permiso o registrar token:', error);
       return false;
     }
   }
@@ -135,9 +136,9 @@ export class NotificationService {
     try {
       // Enviar el token al backend
       await userService.saveUserFcmToken(token);
-      console.log('Token FCM guardado en el servidor correctamente');
+      logger.log('Token FCM guardado en el servidor correctamente');
     } catch (error) {
-      console.error('Error al guardar el token FCM en el servidor:', error);
+      logger.error('Error al guardar el token FCM en el servidor:', error);
     }
   }
 
@@ -148,7 +149,7 @@ export class NotificationService {
     if (!this.messaging) return;
     
     onMessage(this.messaging, (payload) => {
-      console.log('Mensaje recibido en primer plano:', payload);
+      logger.log('Mensaje recibido en primer plano:', payload);
       
       // Mostrar una notificación personalizada
       if (payload.notification) {
@@ -163,7 +164,7 @@ export class NotificationService {
    */
   private showCustomNotification(title: string, body: string, data?: any): void {
     if (!('Notification' in window)) {
-      console.warn('Este navegador no soporta notificaciones');
+      logger.warn('Este navegador no soporta notificaciones');
       return;
     }
 

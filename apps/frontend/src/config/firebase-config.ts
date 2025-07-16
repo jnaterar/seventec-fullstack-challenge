@@ -1,6 +1,6 @@
-// Importaciones de Firebase
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { logger } from '@frontend/shared/utils/logger';
 
 // Configuración de Firebase para el frontend
 interface FirebaseConfig {
@@ -53,7 +53,7 @@ const loadFirebaseConfig = async (): Promise<FirebaseConfig> => {
     
     // Validar configuración requerida
     if (!config.apiKey || !config.authDomain || !config.projectId) {
-      console.error('Configuración de Firebase incompleta:', config);
+      logger.error('Configuración de Firebase incompleta:', config);
       throw new Error('La configuración de Firebase está incompleta');
     }
     
@@ -62,17 +62,17 @@ const loadFirebaseConfig = async (): Promise<FirebaseConfig> => {
     const missingFields = requiredFields.filter(field => !config[field]);
     
     if (missingFields.length > 0) {
-      console.error('Campos faltantes en la configuración de Firebase:', missingFields);
+      logger.error('Campos faltantes en la configuración de Firebase:', missingFields);
       throw new Error(`Faltan campos requeridos en la configuración de Firebase: ${missingFields.join(', ')}`);
     }
     
     return config as FirebaseConfig;
   } catch (error) {
-    console.error('Error al cargar la configuración de Firebase:', error);
+    logger.error('Error al cargar la configuración de Firebase:', error);
     // Intentar construir desde variables de entorno como respaldo
     const envConfig = buildConfigFromEnv();
     if (envConfig) {
-      console.warn('Usando configuración de Firebase desde variables de entorno');
+      logger.warn('Usando configuración de Firebase desde variables de entorno');
       return envConfig;
     }
     throw new Error('No se pudo cargar la configuración de Firebase. Verifica que el archivo firebase-web-keys.json exista en el directorio público, tenga el formato correcto o define las variables de entorno VITE_FIREBASE_* correspondientes.');
@@ -124,14 +124,14 @@ export const initializeFirebase = async () => {
     
     return { app: firebaseApp, auth: firebaseAuth };
   } catch (error) {
-    console.error('Error al inicializar Firebase:', error);
+    logger.error('Error al inicializar Firebase:', error);
     throw error;
   }
 };
 
 // Inicializar Firebase inmediatamente
 initializeFirebase().catch(error => {
-  console.error('Error al inicializar Firebase:', error);
+  logger.error('Error al inicializar Firebase:', error);
 });
 
 // Función para obtener la instancia de auth asegurando la inicialización
@@ -141,7 +141,7 @@ export const getAuthInstance = async () => {
     await initializeFirebase();
     return getAuth();
   } catch (error) {
-    console.error('Error al obtener la instancia de autenticación:', error);
+    logger.error('Error al obtener la instancia de autenticación:', error);
     throw error;
   }
 };

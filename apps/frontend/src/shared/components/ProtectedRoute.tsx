@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/shared/context/AuthContext';
+import { useAuth } from '@frontend/shared/context/AuthContext';
 import { CircularProgress, Box, Typography } from '@mui/material';
 
 interface ProtectedRouteProps {
