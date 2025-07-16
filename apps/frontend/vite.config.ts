@@ -12,18 +12,6 @@ export default defineConfig({
       {
         find: '@',
         replacement: resolve(__dirname, 'src')
-      },
-      {
-        find: '@frontend',
-        replacement: resolve(__dirname, 'src')
-      },
-      {
-        find: '@backend',
-        replacement: resolve(__dirname, '../../backend/src')
-      },
-      {
-        find: '@enums',
-        replacement: resolve(__dirname, '../../libs/shared/enums/src')
       }
     ],
     preserveSymlinks: true

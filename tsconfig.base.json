@@ -24,6 +24,7 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
+      "@frontend/*": ["apps/frontend/src/*"],
       "@backend/*": ["apps/backend/src/*"],
       "@core/*": ["apps/backend/src/core/*"],
       "@infrastructure/*": ["apps/backend/src/infrastructure/*"],
@@ -38,6 +39,11 @@
     "noImplicitThis": true,
     "alwaysStrict": true
   },
-  "exclude": ["node_modules", "dist", "tmp"],
-  "include": ["apps/**/*.ts", "apps/**/*.tsx", "libs/**/*.ts", "libs/**/*.tsx"]
+  "include": [
+    "apps/**/*.ts", 
+    "apps/**/*.tsx", 
+    "libs/**/*.ts", 
+    "libs/**/*.tsx"
+  ],
+  "exclude": ["node_modules", "dist", "tmp"]
 }

@@ -9,6 +9,6 @@
     "skipLibCheck": true,
     "paths": {}
   },
-  "exclude": ["node_modules", "dist"],
-  "include": ["apps/**/*.ts", "apps/**/*.tsx", "libsBase/**/*.ts", "libsBase/**/*.tsx"]
+  "include": ["apps/**/*.ts", "apps/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }
